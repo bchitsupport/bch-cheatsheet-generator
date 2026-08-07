@@ -83,6 +83,8 @@ export default function NewSheetPage() {
     setStorageNote(null);
     setStep('extract');
 
+    const startedAt = Date.now();
+
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
@@ -171,7 +173,19 @@ export default function NewSheetPage() {
       }
 
       if (!finished) {
-        setError('The connection closed before generation finished. Try again.');
+        // The stream ended without a done/error frame. The route reports its own
+        // failures, so reaching here means the server process itself was killed —
+        // almost always the hosting platform's function time limit (Vercel: 300s),
+        // occasionally memory. Say so, because "connection closed" on its own
+        // sends people looking at their network.
+        const secs = Math.round((Date.now() - startedAt) / 1000);
+        setError(
+          `The server stopped responding after ${secs} seconds, without reporting an error. ` +
+            'That usually means the generation exceeded the hosting time limit rather than ' +
+            'anything being wrong with your specs. Try again with fewer spec sections, or ' +
+            'split the upload into two batches. If it keeps happening at roughly the same ' +
+            'time, the job needs to run in the background instead.',
+        );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed.');

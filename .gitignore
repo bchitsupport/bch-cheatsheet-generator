@@ -16,6 +16,9 @@ next-env.d.ts
 Thumbs.db
 .vercel
 
+# Machine-local Claude Code permissions — not shared.
+.claude/settings.local.json
+
 # Personal/marketing images that live in this folder but aren't part of the app.
 # The app's only image asset is public/bch-logo.svg. Delete these two lines if
 # you want them version-controlled.
