@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bch-navy: #1e3a5f;
+  --bch-accent: #2563eb;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-bch-line bg-white shadow-sm;
+  }
+
+  .field-label {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-bch-muted;
+  }
+
+  .field-input {
+    @apply w-full rounded-md border border-bch-line bg-white px-3 py-2 text-sm text-bch-ink
+           outline-none transition placeholder:text-slate-400
+           focus:border-bch-accent focus:ring-2 focus:ring-bch-accent/20;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-bch-accent px-4 py-2
+           text-sm font-semibold text-white transition hover:bg-blue-700
+           disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-bch-accent
+           bg-white px-4 py-2 text-sm font-semibold text-bch-accent transition
+           hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-slate-200
+           disabled:text-slate-400;
+  }
+
+  .section-title {
+    @apply text-xs font-bold uppercase tracking-[0.12em] text-bch-muted;
+  }
+}
+
+/* The spinner in ProgressSteps. */
+@keyframes bch-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.bch-spin {
+  animation: bch-spin 0.8s linear infinite;
+}

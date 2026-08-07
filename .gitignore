@@ -1,0 +1,23 @@
+node_modules/
+.next/
+.next-dev/
+out/
+build/
+dist/
+
+.env
+.env.local
+.env*.local
+
+*.tsbuildinfo
+next-env.d.ts
+
+.DS_Store
+Thumbs.db
+.vercel
+
+# Personal/marketing images that live in this folder but aren't part of the app.
+# The app's only image asset is public/bch-logo.svg. Delete these two lines if
+# you want them version-controlled.
+Pictures/
+BCH Address and phone numbers/

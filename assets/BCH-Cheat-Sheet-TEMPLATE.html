@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Plumbing Field Cheat Sheet — Airside D / CCBS</title>
+<style>
+@page { size: letter; margin: 28.5pt; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root{
+  --ink:#1a1d1f;
+  --ink2:#3a3f42;
+  --muted:#6b7280;
+  --bd:#b7b3a8;
+  --bd2:#d9d6ce;
+  --cream:#f6f5f0;
+  --cream2:#f1efe8;
+  --sheet:#fafaf8;
+  --green:#0e7a43;
+  --blue:#1d6fb8;
+  --char:#33383b;
+  --amber:#b45309;
+  --gold:#d99a00;
+  --red:#c1272d;
+  --redbg:#fbeaea;
+  --cond:"DejaVu Sans Condensed","DejaVu Sans",sans-serif;
+  --mono:"DejaVu Sans Mono",monospace;
+  --sans:"Liberation Sans",Arial,sans-serif;
+}
+
+html,body{ background:#fff; }
+body{
+  font-family:var(--sans);
+  font-size:6.9pt;
+  line-height:1.25;
+  color:var(--ink);
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
+.sheet{ background:var(--sheet); }
+
+.mono{ font-family:var(--mono); }
+b,strong{ font-weight:bold; }
+
+/* ============ BANNER ============ */
+.banner{ background:var(--ink); color:#fff; padding:10px 15px 9px; }
+.brow{ display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
+.brand{ font-family:var(--cond); font-weight:bold; font-size:19.5pt; line-height:0.96; letter-spacing:0.2px; }
+.addr{ font-family:var(--mono); font-size:7.04pt; line-height:1.385; text-align:right; color:#e8e8e6; white-space:nowrap; }
+.bdiv{ height:0.75pt; background:var(--ink2); margin:8px 0 9px; }
+.brow2{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; }
+.ptitle{ font-family:var(--cond); font-weight:bold; font-size:16.5pt; line-height:1.0; }
+.psub{ font-family:var(--cond); font-weight:bold; font-size:9.37pt; line-height:1.0; letter-spacing:1.6px; color:#e8e8e6; margin-top:2px; }
+.meta{ font-family:var(--mono); font-size:7.04pt; line-height:1.385; text-align:right; color:#e8e8e6; white-space:nowrap; }
+.meta .m1{ font-weight:bold; color:#fff; }
+.meta .m5{ color:#b9b9b5; }
+
+/* ============ COLOR STRIP ============ */
+.strip{ display:flex; height:5.25pt; }
+.strip i{ flex:1 1 20%; }
+
+/* ============ PANEL ============ */
+.panel{ background:#fff; border:0.75pt solid var(--bd); margin-top:10.5pt; }
+.panel-h{ background:var(--cream2); border-bottom:0.75pt solid var(--bd); padding:4px 10px; font-family:var(--cond); font-weight:bold; font-size:9.75pt; line-height:1.15; letter-spacing:0.3px; }
+.panel-h em{ font-family:var(--cond); font-weight:normal; font-style:normal; font-size:7.5pt; color:var(--muted); letter-spacing:0.3px; }
+.panel-b{ padding:6px 10px 6.5px; }
+
+.keys{ display:flex; flex-wrap:wrap; column-gap:16px; row-gap:5px; }
+.key{ display:flex; align-items:center; gap:5px; font-size:7.87pt; line-height:1.0; }
+.badge{
+  display:inline-block; font-family:var(--mono); font-weight:bold; font-size:7.87pt;
+  line-height:11px; color:#fff; background:var(--char); border-radius:2px;
+  padding:2px 5px; min-width:16px; text-align:center;
+}
+.b-green{background:var(--green)} .b-blue{background:var(--blue)} .b-char{background:var(--char)}
+.b-amber{background:var(--amber)} .b-gold{background:var(--gold)}
+.keynote{ font-size:6.9pt; line-height:1.3; margin-top:7px; }
+
+/* ============ SECTION HEAD ============ */
+.sec{ margin-top:9px; }
+.sec-head{ display:flex; align-items:baseline; border-bottom:1.5pt solid var(--ink); padding-bottom:7px; margin-bottom:6px; break-after:avoid; }
+.sec-num{ font-family:var(--mono); font-weight:bold; font-size:8.25pt; line-height:11px; color:#fff; background:var(--ink); border-radius:2px; padding:3px 7px; align-self:center; }
+.sec-t{ font-family:var(--cond); font-weight:bold; font-size:11.25pt; line-height:1.0; letter-spacing:0.4px; margin-left:7.5pt; }
+.sec-s{ margin-left:auto; font-family:var(--mono); font-size:7.12pt; color:var(--muted); letter-spacing:0.3px; }
+
+/* ============ TABLES ============ */
+table.g{ width:100%; border-collapse:collapse; background:#fff; border:0.75pt solid var(--bd); table-layout:fixed; break-inside:auto; }
+table.g thead{ display:table-header-group; }
+table.g tr{ break-inside:avoid; }
+table.g th{
+  background:var(--ink); color:#fff; font-family:var(--cond); font-weight:bold; font-size:7.04pt;
+  line-height:1.04; text-align:left; padding:2px 4.5px; letter-spacing:0.3px;
+  border-right:0.75pt solid var(--ink2);
+}
+table.g th:last-child{ border-right:0; }
+table.g td{ padding:2px 4.5px; border-right:0.75pt solid var(--bd2); border-top:0.75pt solid var(--bd2); vertical-align:top; }
+table.g td:last-child{ border-right:0; }
+table.g tbody tr:first-child td{ border-top:0; }
+table.g tbody tr:nth-child(even){ background:var(--cream); }
+table.g td.mid{ vertical-align:middle; }
+.c{ text-align:center; }
+
+/* spine */
+.spine{ border-left:3pt solid transparent; }
+.s-green{ border-left-color:var(--green) } .s-blue{ border-left-color:var(--blue) }
+.s-char{ border-left-color:var(--char) } .s-amber{ border-left-color:var(--amber) }
+.s-gold{ border-left-color:var(--gold) }
+table.spined{ border-left:0; }
+
+.sysc{ display:flex; align-items:center; gap:5px; }
+.sysc b{ font-size:6.9pt; }
+.svc{ display:block; }
+.svc .badge{ margin-left:5px; vertical-align:-2px; }
+
+/* sub headings */
+.sub{ font-family:var(--cond); font-weight:bold; font-size:8.62pt; letter-spacing:0.4px; margin:0 0 3px; line-height:1.1; break-after:avoid; }
+.sub em{ font-family:var(--cond); font-weight:normal; font-style:normal; font-size:7.5pt; color:var(--muted); }
+.blk{ font-family:var(--cond); font-weight:bold; font-size:9.0pt; letter-spacing:0.4px; margin:0 0 4px; line-height:1.15; }
+
+.note{ font-size:7.2pt; line-height:1.45; margin-top:4px; color:var(--ink); }
+.note.sm{ font-size:6.9pt; }
+.note .g{ color:var(--muted); }
+.tnote{ font-size:6.9pt; line-height:1.4; margin-top:3.5px; color:var(--muted); }
+
+/* callouts */
+.callout{ background:var(--cream2); border-left:3pt solid var(--muted); padding:6px 10px 7px; margin-top:8px; break-inside:avoid; }
+.callout.red{ background:var(--redbg); border-left-color:var(--red); }
+.callout.red .blk{ color:var(--red); }
+.callout ul{ list-style:none; }
+.callout li{ font-size:7.2pt; line-height:1.5625; padding-left:12px; position:relative; }
+.callout li:before{ content:"•"; position:absolute; left:3px; }
+.callout p{ font-size:7.2pt; line-height:1.45; }
+
+/* grids */
+.g2{ display:grid; grid-template-columns:1fr 1fr; gap:6.75pt; align-items:start; }
+.g13{ display:grid; grid-template-columns:1.3fr 1fr; gap:6.75pt; align-items:start; }
+.stack>*+*{ margin-top:8px; }
+
+/* mini two-column spacing table (§03) */
+table.mini{ width:100%; border-collapse:collapse; table-layout:fixed; }
+table.mini td{
+  font-family:var(--mono); font-size:6.9pt; padding:1.5px 4px;
+  border-top:0.75pt solid var(--bd2); border-right:0.75pt solid var(--bd2); vertical-align:top;
+}
+table.mini td:last-child{ border-right:0; }
+table.mini tr:first-child td{ border-top:0; }
+
+/* swatches */
+.sw{ display:inline-block; width:11.25pt; height:8.25pt; border-radius:1.5px; vertical-align:-1px; margin-right:5px; }
+.swrow{ font-size:7.87pt; }
+
+/* footer */
+.foot{ display:flex; justify-content:space-between; gap:16px; border-top:0.75pt solid var(--bd); margin-top:10px; padding-top:6px; font-family:var(--mono); font-size:6.75pt; line-height:1.35; color:var(--muted); letter-spacing:0.3px; }
+.foot div:last-child{ text-align:right; }
+
+.avoid{ break-inside:avoid; }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <!-- ================= BANNER ================= -->
+  <div class="banner">
+    <div class="brow">
+      <div class="brand">BCH MECHANICAL,<br>L.L.C.</div>
+      <div class="addr">
+        6354 118th Avenue North · Largo, FL 33773<br>
+        P: 727-546-3561<br>
+        F: 727-545-1801<br>
+        Toll Free F: 1-866-523-5750
+      </div>
+    </div>
+    <div class="bdiv"></div>
+    <div class="brow2">
+      <div>
+        <div class="ptitle">PLUMBING</div>
+        <div class="psub">FIELD CHEAT SHEET · DIVISION 22</div>
+      </div>
+      <div class="meta">
+        <div class="m1">TAMPA INT'L AIRPORT</div>
+        <div>AIRSIDE D / CCBS</div>
+        <div>Prepared by Joshua Ahwai · Assistant Project Manager Intern</div>
+        <div>Joshua.Ahwai@bchmechanical.com</div>
+        <div class="m5">Quick-ref — verify against full spec &amp; drawings</div>
+      </div>
+    </div>
+  </div>
+  <div class="strip">
+    <i style="background:#0e7a43"></i><i style="background:#1d6fb8"></i><i style="background:#33383b"></i><i style="background:#b45309"></i><i style="background:#d99a00"></i>
+  </div>
+
+  <!-- ================= KEY PANEL ================= -->
+  <div class="panel avoid">
+    <div class="panel-h">SYSTEM ABBREVIATIONS &amp; COLOR KEY <em>— ABBREVS PER DRAWING AD-P001</em></div>
+    <div class="panel-b">
+      <div class="keys">
+        <div class="key"><span class="badge b-green">CW</span>Domestic Cold Water</div>
+        <div class="key"><span class="badge b-green">HW</span>Domestic Hot Water</div>
+        <div class="key"><span class="badge b-green">HWR</span>Hot Water Recirc</div>
+        <div class="key"><span class="badge b-green">SW</span>Soft Cold Water</div>
+        <div class="key"><span class="badge b-green">NP</span>Non-Potable</div>
+        <div class="key"><span class="badge b-char">S</span>Sanitary Waste</div>
+        <div class="key"><span class="badge b-char">V</span>Vent</div>
+        <div class="key"><span class="badge b-blue">ST</span>Storm Drain</div>
+        <div class="key"><span class="badge b-blue">STO</span>Overflow Storm</div>
+        <div class="key"><span class="badge b-blue">CD</span>Condensate</div>
+        <div class="key"><span class="badge b-amber">GW</span>Grease Waste</div>
+        <div class="key"><span class="badge b-amber">OW</span>Oil Waste</div>
+        <div class="key"><span class="badge b-gold">G</span>Natural Gas</div>
+      </div>
+      <div class="keynote">⚠ <b>Band colors are for finding sections on this sheet only</b> — they are not what you install. For actual
+      pipe-label &amp; underground-tape colors, see <b>Section 08 — Identification &amp; Labeling</b>.</div>
+    </div>
+  </div>
+
+  <!-- ================= 01 ================= -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">01</span><span class="sec-t">PIPE MATERIAL — BY SYSTEM &amp; LOCATION</span><span class="sec-s">SPEC 22 11 19 · 22 13 16 · 22 70 00</span></div>
+    <table class="g spined">
+      <colgroup><col style="width:18%"><col style="width:19.5%"><col style="width:19.5%"><col style="width:19.5%"><col style="width:23.5%"></colgroup>
+      <thead><tr><th>SYSTEM</th><th>ABOVE GROUND —<br>CONCEALED</th><th>ABOVE GROUND —<br>EXPOSED</th><th>BELOW GROUND</th><th>NOTES</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="spine s-green mid"><span class="sysc"><span class="badge b-green">CW</span><b>Domestic Cold Water</b></span></td>
+          <td>Copper <span class="mono">Type K</span>, hard temper</td>
+          <td>Copper <span class="mono">Type K</span>, hard temper</td>
+          <td>Copper <span class="mono">Type K</span>, soft drawn</td>
+          <td>Exterior CW gets insulated.</td>
+        </tr>
+        <tr>
+          <td class="spine s-green mid"><span class="sysc"><span class="badge b-green">HW</span><b>Domestic Hot Water</b></span></td>
+          <td>Copper <span class="mono">Type K</span>, hard temper</td>
+          <td>Copper <span class="mono">Type K</span>, hard temper</td>
+          <td>Copper <span class="mono">Type K</span>, soft drawn</td>
+          <td>Ecc. reducers on horiz. runs, top flat for venting. <b>SW &amp; NP</b>, where used, follow CW/HW rules — Type K. Verify system present on drawings.</td>
+        </tr>
+        <tr>
+          <td class="spine s-char mid"><span class="sysc"><span class="badge b-char">S</span><b>Sanitary Waste</b></span></td>
+          <td>Cast iron soil, svc wt, <b>NO-HUB</b></td>
+          <td>Cast iron soil, svc wt, <b>NO-HUB</b></td>
+          <td>Schedule 40 PVC DWV</td>
+          <td style="color:#c1272d"><b>Above-ground P-traps = chrome-plated brass. PVC P-traps NOT allowed.</b></td>
+        </tr>
+        <tr>
+          <td class="spine s-char mid"><span class="sysc"><span class="badge b-char">V</span><b>Vent</b></span></td>
+          <td>Cast iron soil, svc wt, <b>NO-HUB</b></td>
+          <td>Cast iron soil, svc wt, <b>NO-HUB</b></td>
+          <td>Schedule 40 PVC DWV</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td class="spine s-amber mid"><span class="sysc"><span class="badge b-amber">GW</span><b>Grease Waste</b></span></td>
+          <td>304 Stainless Steel</td>
+          <td>304 Stainless Steel</td>
+          <td>Schedule 40 PVC DWV</td>
+          <td>SS per ASME <span class="mono">A112.3.1</span>, EPDM seal.</td>
+        </tr>
+        <tr>
+          <td class="spine s-amber mid"><span class="sysc"><span class="badge b-amber">OW</span><b>Oil Waste</b></span></td>
+          <td>—</td>
+          <td>—</td>
+          <td>Schedule 40 PVC DWV</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td class="spine s-blue mid"><span class="sysc"><span class="badge b-blue">ST</span><b>Storm Drain</b></span></td>
+          <td>Cast iron, svc wt, <b>NO-HUB</b></td>
+          <td>Sch 10, <b>316L SS</b>, satin finish</td>
+          <td>Schedule 40 PVC DWV</td>
+          <td>RWL encased in concrete walls/columns = PVC.</td>
+        </tr>
+        <tr>
+          <td class="spine s-blue mid"><span class="sysc"><span class="badge b-blue">CD</span><b>Condensate</b></span></td>
+          <td>Cast iron, svc wt, <b>NO-HUB</b></td>
+          <td>Cast iron, svc wt, <b>NO-HUB</b></td>
+          <td>Schedule 40 PVC DWV</td>
+          <td>Copper <span class="mono">Type L</span> hard where cond. waste noted. Extend to nearest catch basin w/ CI backwater valve.</td>
+        </tr>
+        <tr>
+          <td class="spine s-gold mid"><span class="sysc"><span class="badge b-gold">G</span><b>Natural Gas</b></span></td>
+          <td colspan="3" class="c" style="font-style:italic;color:#6b7280">See Section 10 — material by pressure</td>
+          <td>Steel above and below ground</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout red">
+      <div class="blk">DO NOT</div>
+      <ul>
+        <li>Install PVC piping in A/C plenums or equipment rooms used as plenums.</li>
+        <li>Use PVC P-traps above ground — chrome-plated brass only.</li>
+        <li>Use the &ldquo;T-drill&rdquo; extruded fitting method on copper. Reducing bushings prohibited (use reducing fittings).</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ================= 02 ================= -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">02</span><span class="sec-t">JOINTS &amp; CONNECTIONS</span><span class="sec-s">SPEC 22 11 19 · 22 13 16</span></div>
+    <table class="g">
+      <colgroup><col style="width:24%"><col style="width:38%"><col style="width:38%"></colgroup>
+      <thead><tr><th>MATERIAL</th><th>JOINT METHOD</th><th>REQUIREMENTS</th></tr></thead>
+      <tbody>
+        <tr><td><b>Copper tube</b></td><td>Solder — <span class="mono">95-5</span> tin-antimony, non-acid flux</td><td>Ream after cut, clean/tin ends, draw solder full depth, wipe excess before hardening.</td></tr>
+        <tr><td><b>No-hub cast iron</b></td><td>Hubless coupling — <span class="mono">24 ga 304 SS</span> shield + neoprene gasket</td><td>Gasket ASTM <span class="mono">C-564</span>, CISPI 301. Per coupling mfr practice.</td></tr>
+        <tr><td><b>Bell &amp; spigot CI</b></td><td>Push-on compression neoprene gasket</td><td>ASTM <span class="mono">A-74</span>. Align before joining.</td></tr>
+        <tr><td><b>PVC DWV</b></td><td>Solvent-cement joint</td><td>ASTM <span class="mono">D-2665</span>, NSF seal. Verify primer VOC compliance.</td></tr>
+        <tr><td><b>Threaded pipe</b></td><td>Teflon tape or non-hardening pipe compound</td><td>Compound on male threads only; leave ≤3 threads exposed.</td></tr>
+        <tr><td><b>Dissimilar metals</b></td><td>Dielectric union / flange</td><td>No dissimilar metals without dielectric isolation (IPC <span class="mono">§605.23</span>).</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ================= 03 ================= -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">03</span><span class="sec-t">HANGER &amp; SUPPORT MATRIX</span><span class="sec-s">22 05 29 + MSS SP-58</span></div>
+    <div class="callout" style="margin-top:0">
+      <p><b style="font-family:var(--cond);font-size:9pt;letter-spacing:0.4px">ALL SYSTEMS:</b> Type 1 Clevis hanger (spec 22 05 29 §2.4.B allows clevis or split ring; PVC-coated or copper clevis required for copper piping — see Copper isolation note below).</p>
+    </div>
+    <div class="sub" style="margin-top:8px">ROD SIZE &amp; SPACING</div>
+    <table class="g spined">
+      <colgroup><col style="width:13.8%"><col style="width:8%"><col style="width:5.4%"><col style="width:14%"><col style="width:31.3%"><col style="width:27.5%"></colgroup>
+      <thead><tr><th>MATERIAL</th><th>SIZE</th><th>ROD</th><th>PIPE SIZE</th><th>MAX HORIZ. SPACING</th><th>VERT.</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="spine s-char" rowspan="3">No-Hub CI</td>
+          <td class="mono">≤6"</td><td class="mono"><b>3/8"</b></td>
+          <td rowspan="3" colspan="2" style="padding:0">
+            <table class="mini"><colgroup><col style="width:30.9%"><col style="width:69.1%"></colgroup>
+              <tr><td>All sizes</td><td><b>5 ft</b></td></tr>
+            </table>
+          </td>
+          <td rowspan="3" class="mono">Every story (15 ft max)</td>
+        </tr>
+        <tr><td class="mono">8"–12"</td><td class="mono"><b>1/2"</b></td></tr>
+        <tr><td class="mono">14"</td><td class="mono"><b>3/4"</b></td></tr>
+
+        <tr>
+          <td class="spine s-amber" rowspan="4">304 SS</td>
+          <td class="mono">≤6"</td><td class="mono"><b>3/8"</b></td>
+          <td rowspan="4" colspan="2" style="padding:0">
+            <table class="mini"><colgroup><col style="width:30.9%"><col style="width:69.1%"></colgroup>
+              <tr><td>&lt;1"</td><td><b>6 ft</b></td></tr>
+              <tr><td>1–2"</td><td><b>8 ft</b></td></tr>
+              <tr><td>2½–4"</td><td><b>10 ft</b></td></tr>
+              <tr><td>5"+</td><td><b>12 ft</b></td></tr>
+            </table>
+          </td>
+          <td rowspan="4" class="mono">Every other story (30 ft max)</td>
+        </tr>
+        <tr><td class="mono">8"</td><td class="mono"><b>1/2"</b></td></tr>
+        <tr><td class="mono">10"</td><td class="mono"><b>5/8"</b></td></tr>
+        <tr><td class="mono">12"–14"</td><td class="mono"><b>3/4"</b></td></tr>
+
+        <tr>
+          <td class="spine s-green" rowspan="4">Type K Copper</td>
+          <td class="mono">≤6"</td><td class="mono"><b>3/8"</b></td>
+          <td rowspan="4" colspan="2" style="padding:0">
+            <table class="mini"><colgroup><col style="width:30.9%"><col style="width:69.1%"></colgroup>
+              <tr><td>≤1¼"</td><td><b>6 ft</b></td></tr>
+              <tr><td>1½"+</td><td><b>8 ft</b></td></tr>
+            </table>
+          </td>
+          <td rowspan="4" class="mono">≤1¼"=4' · 1½"+=every story</td>
+        </tr>
+        <tr><td class="mono">8"</td><td class="mono"><b>1/2"</b></td></tr>
+        <tr><td class="mono">10"</td><td class="mono"><b>5/8"</b></td></tr>
+        <tr><td class="mono">12"–14"</td><td class="mono"><b>3/4"</b></td></tr>
+
+        <tr>
+          <td class="spine s-blue" rowspan="4">Sch 40 PVC DWV</td>
+          <td class="mono">≤2"</td><td class="mono"><b>3/8"</b></td>
+          <td rowspan="4" colspan="2" style="padding:0">
+            <table class="mini"><colgroup><col style="width:30.9%"><col style="width:69.1%"></colgroup>
+              <tr><td>≤1¼"</td><td><b>5 ft</b></td></tr>
+              <tr><td>1½–2"</td><td><b>6 ft</b></td></tr>
+              <tr><td>2½–3"</td><td><b>7 ft</b></td></tr>
+              <tr><td>4"</td><td><b>7.5 ft</b></td></tr>
+              <tr><td>6"</td><td><b>8.5 ft</b></td></tr>
+            </table>
+          </td>
+          <td rowspan="4" class="mono">10 ft</td>
+        </tr>
+        <tr><td class="mono">2½"–3"</td><td class="mono"><b>1/2"</b></td></tr>
+        <tr><td class="mono">4"</td><td class="mono"><b>5/8"</b></td></tr>
+        <tr><td class="mono">6"</td><td class="mono"><b>3/4"</b></td></tr>
+      </tbody>
+    </table>
+    <div class="note sm"><b>Support:</b> vertical piping at base of each riser + intervals above. Hanger at each valve, strainer &amp; change of direction. Insulated pipe: size hanger for pipe + insulation + shield.</div>
+    <div class="note sm"><b>Copper isolation:</b> PVC-coated or copper hangers; wrap copper w/ 2 layers dielectric tape at steel trapeze. Riser clamps galvanized (PVC-coated/copper for Cu &amp; brass). <b>No powder-set fasteners.</b></div>
+    <div class="note sm"><b>PVC temperature:</b> spacing assumes ambient ≤73°F. At 100°F+ (kitchen/hot-waste runs), reduce horiz spacing to 5–6 ft per manufacturer.</div>
+  </div>
+
+  <!-- ================= 04 ================= -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">04</span><span class="sec-t">INSULATION MATRIX</span><span class="sec-s">SPEC 22 07 00</span></div>
+    <div class="g13">
+      <div>
+        <table class="g spined">
+          <colgroup><col style="width:45%"><col style="width:23%"><col style="width:8.5%"><col style="width:23.5%"></colgroup>
+          <thead><tr><th>SYSTEM SERVICE</th><th>PIPE MATERIAL</th><th>SIZE</th><th>INSULATION</th></tr></thead>
+          <tbody>
+            <tr><td class="spine s-blue mid"><span class="svc">Storm Drain — Below Grade <span class="badge b-blue">ST·STO</span></span></td><td>Sch 40 PVC DWV</td><td class="mono">All</td><td class="mono"><b>1"</b></td></tr>
+            <tr><td class="spine s-blue mid"><span class="svc">Storm Drain — Above Grade <span class="badge b-blue">ST·STO</span></span></td><td>No-Hub Cast Iron</td><td class="mono">All</td><td class="mono"><b>1"</b></td></tr>
+            <tr><td class="spine s-blue mid"><span class="svc">Condensate — Below Grade <span class="badge b-blue">CD</span></span></td><td>Sch 40 PVC DWV</td><td class="mono">All</td><td class="mono"><b>1"</b></td></tr>
+            <tr><td class="spine s-blue mid"><span class="svc">Condensate — Above Grade <span class="badge b-blue">CD</span></span></td><td>No-Hub Cast Iron</td><td class="mono">All</td><td class="mono"><b>1"</b></td></tr>
+            <tr><td class="spine s-green mid"><span class="svc">Domestic Cold Water — Exterior <span class="badge b-green">CW</span></span></td><td>Type K Hard Copper</td><td class="mono">All</td><td class="mono"><b>1½"</b></td></tr>
+            <tr><td class="spine s-green mid"><span class="svc">Domestic Hot Water — Supply &amp; Return <span class="badge b-green">HW·HWR</span></span></td><td>Type K Hard Copper</td><td class="mono">2½"+</td><td class="mono"><b>1½"</b></td></tr>
+            <tr><td class="spine s-green mid"><span class="svc">Domestic Hot Water — Supply &amp; Return <span class="badge b-green">HW·HWR</span></span></td><td>Type K Hard Copper</td><td class="mono">≤2"</td><td class="mono"><b>Main 1" · Br ½"</b></td></tr>
+          </tbody>
+        </table>
+        <div class="tnote"><b>Insulation thicknesses shown are minimums per spec</b> — drawings may require more (verify against contract drawings).</div>
+      </div>
+      <div>
+        <div class="callout" style="margin-top:0;border-left-color:var(--muted)">
+          <div class="blk">WHAT GETS INSULATED</div>
+          <ul>
+            <li>Above &amp; below grade HW supply &amp; HWR</li>
+            <li>Ice machine drains &amp; A/C condensate lines — insulate up to the main soil line tie-in (serving 4+ fixtures)</li>
+            <li>Interior storm-water piping</li>
+            <li>Above-grade exterior domestic cold water</li>
+            <li>Handicap lav exposed hot &amp; waste — <span class="mono">½"</span> foamed plastic/PE</li>
+            <li>Above-grade water piping in unheated areas</li>
+          </ul>
+          <div class="note"><b>HW thickness (spec):</b> mains <span class="mono">≤2"</span> = <span class="mono">1"</span> · mains <span class="mono">≥2½"</span> = <span class="mono">1½"</span> · branch runouts <span class="mono">≤2"</span> = <span class="mono">½"</span>.</div>
+          <div class="note"><b>Fire rating (NFPA 90):</b> flame spread <span class="mono">≤25</span>, smoke developed <span class="mono">&lt;50</span>. Hanger shield <span class="mono">16 ga</span> galv, halfway up + <span class="mono">6"</span> each side.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 05 ================= -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">05</span><span class="sec-t">DRAINAGE — SLOPES, CLEANOUTS &amp; DRAINS</span><span class="sec-s">SPEC 22 13 16 · 22 13 19</span></div>
+    <div class="g2">
+      <div class="stack">
+        <div>
+          <div class="sub">MINIMUM SLOPE — SOIL &amp; WASTE</div>
+          <table class="g">
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>PIPE SIZE</th><th>SLOPE</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">3" and larger</td><td class="mono"><b>1/8" per ft</b></td></tr>
+              <tr><td class="mono">2" and smaller</td><td class="mono"><b>1/4" per ft</b></td></tr>
+            </tbody>
+          </table>
+          <div class="tnote">Horizontal vent lines: min grade back to stacks. Vertical vents as direct as possible.</div>
+        </div>
+        <div>
+          <div class="sub">FLOOR DRAINS &amp; BACKWATER VALVES</div>
+          <table class="g">
+            <colgroup><col style="width:24%"><col style="width:76%"></colgroup>
+            <thead><tr><th>ITEM</th><th>MATERIAL / RULE</th></tr></thead>
+            <tbody>
+              <tr><td><b>Floor drains</b></td><td>Cast iron or SS · set grate flush at low point · individual traps</td></tr>
+              <tr><td><b>Trench drains</b></td><td>Ductile/gray iron · SS grate · extra heavy-duty</td></tr>
+              <tr><td><b>Backwater valve</b></td><td>Cast iron or bronze · removable ball float</td></tr>
+              <tr><td><b>Exposed finish</b></td><td style="color:#c1272d"><b>Brushed chrome (all cleanouts &amp; drain tops in view)</b></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="stack">
+        <div>
+          <div class="sub">CLEANOUT PLACEMENT</div>
+          <table class="g">
+            <colgroup><col style="width:31%"><col style="width:69%"></colgroup>
+            <thead><tr><th>RULE</th><th>REQUIREMENT</th></tr></thead>
+            <tbody>
+              <tr><td><b>Size</b></td><td>= pipe size up to 4"; use 4" for larger pipe</td></tr>
+              <tr><td><b>Direction change</b></td><td>At each change &gt;45°</td></tr>
+              <tr><td><b>Max interval</b></td><td><span class="mono">50 ft</span> for ≤4" · <span class="mono">100 ft</span> for larger</td></tr>
+              <tr><td><b>Stacks</b></td><td>At base of each vertical soil/waste stack</td></tr>
+              <tr><td><b>Below floor</b></td><td>Deck plate flush w/ finished floor</td></tr>
+              <tr><td><b>Concealed</b></td><td>Wall access cover flush w/ finished wall</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <div class="blk">UNDERGROUND UTILITY SEPARATION</div>
+          <p>Water &amp; sewer: <span class="mono">10 ft</span> horizontal separation. If closer, water bottom <span class="mono">18"</span> above sewer top (or encase sewer in concrete). Min cover over exterior pipe <span class="mono">3 ft</span>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 06 ================= -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">06</span><span class="sec-t">VALVES &amp; SPECIALTIES</span><span class="sec-s">SPEC 22 05 23 · 22 11 19</span></div>
+    <div class="g2">
+      <div>
+        <div class="sub">DOMESTIC WATER VALVE SCHEDULE</div>
+        <table class="g">
+          <colgroup><col style="width:10.5%"><col style="width:18.5%"><col style="width:71%"></colgroup>
+          <thead><tr><th>SIZE</th><th>VALVE</th><th>SPEC</th></tr></thead>
+          <tbody>
+            <tr><td class="mono mid" rowspan="3">≤2" NPS</td><td>Ball</td><td>2-pc full port, <b>bronze</b>, chrome ball, Teflon seat, <span class="mono">Class 125</span></td></tr>
+            <tr><td>Gate</td><td>Bronze, <span class="mono">Class 150</span>, NRS</td></tr>
+            <tr><td>Swing check</td><td>Bronze disc, <span class="mono">Class 150</span></td></tr>
+            <tr><td class="mono mid" rowspan="3">≥2½" NPS</td><td>Ball</td><td>Iron, <span class="mono">Class 150</span></td></tr>
+            <tr><td>Gate</td><td>Iron, <span class="mono">Class 125</span>, NRS</td></tr>
+            <tr><td>Swing check</td><td>Iron, <span class="mono">Class 125</span>, nonmetallic-to-metal seats</td></tr>
+          </tbody>
+        </table>
+        <div class="tnote"><b>Install:</b> valve stem vertical/upright in horizontal piping. Isolate each riser &amp; branch. Blowdown valve on <span class="mono">1½"</span>+ strainers.</div>
+      </div>
+      <div class="stack">
+        <div>
+          <div class="sub">BACKFLOW PREVENTERS</div>
+          <table class="g">
+            <colgroup><col style="width:41%"><col style="width:16%"><col style="width:43%"></colgroup>
+            <thead><tr><th>TYPE</th><th>SIZE</th><th>BODY</th></tr></thead>
+            <tbody>
+              <tr><td class="mid" rowspan="2"><b>Reduced Pressure (RP)</b><br><span class="mono" style="font-weight:bold">ASSE 1013</span></td><td class="mono">¾"–3"</td><td>Bronze</td></tr>
+              <tr><td class="mono">4"–6"</td><td>Iron, epoxy-coated waterway</td></tr>
+              <tr><td class="mid" rowspan="3"><b>Double Check (DC)</b><br><span class="mono" style="font-weight:bold">ASSE 1015</span></td><td class="mono">¾"–2"</td><td>Bronze</td></tr>
+              <tr><td class="mono">2½"–3"</td><td>Iron body, flanged</td></tr>
+              <tr><td class="mono">4"–10"</td><td>Cast iron, lead-free epoxy, flanged</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout" style="border-left-color:var(--gold)">
+          <div class="blk">WATER HAMMER &amp; AIR</div>
+          <p>Water hammer arresters per <span class="mono">PDI-WH201</span> at plan locations w/ access panels. Air chambers <span class="mono">20</span> pipe dia (min <span class="mono">12"</span>) at fixtures, risers, ends of supply lines.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 07 ================= -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">07</span><span class="sec-t">FIXTURES &amp; MOUNTING HEIGHTS</span><span class="sec-s">SPEC 22 40 00</span></div>
+    <div class="g2">
+      <div>
+        <div class="sub">MOUNTING HEIGHTS <em>— FLOOR TO RIM</em></div>
+        <table class="g">
+          <colgroup><col style="width:31%"><col style="width:24%"><col style="width:45%"></colgroup>
+          <thead><tr><th>FIXTURE</th><th>STANDARD</th><th>ACCESSIBLE / W-CHAIR</th></tr></thead>
+          <tbody>
+            <tr><td><b>Water Closet</b></td><td class="mono"><b>15"</b></td><td class="mono"><b>18"</b></td></tr>
+            <tr><td><b>Urinal</b></td><td class="mono"><b>22"</b></td><td class="mono"><b>17"</b></td></tr>
+            <tr><td><b>Water Cooler</b></td><td class="mono"><b>40"</b></td><td class="mono"><b>35"</b></td></tr>
+            <tr><td><b>Drinking Fountain</b></td><td class="mono"><b>40"</b></td><td class="mono"><b>35"</b></td></tr>
+          </tbody>
+        </table>
+        <div class="tnote">Install stop valve at each fixture. Seal to walls/floors w/ silicone matched to fixture color. Set mop basins/receptors in cement grout bed.</div>
+      </div>
+      <div>
+        <div class="sub">APPROVED MANUFACTURERS</div>
+        <table class="g">
+          <colgroup><col style="width:45%"><col style="width:55%"></colgroup>
+          <tbody>
+            <tr><td><b>Lav / WC / Urinal</b></td><td>Kohler · Toto</td></tr>
+            <tr><td><b>Faucets</b></td><td>Speakman · Kohler</td></tr>
+            <tr><td><b>Flush valves</b></td><td>Zurn (Hydromechanics)</td></tr>
+            <tr><td><b>Toilet seats</b></td><td>Bemis — elongated, white, open-front, SS check hinge</td></tr>
+            <tr><td><b>Water coolers</b></td><td>Halsey Taylor</td></tr>
+            <tr><td><b>Service sinks</b></td><td>Fiat</td></tr>
+            <tr><td><b>Fixture supports</b></td><td>Watts</td></tr>
+            <tr><td><b>Emergency eyewash</b> <span class="mono">EE-1</span></td><td>Bradley (wall bracket, push-plate)</td></tr>
+            <tr><td><b>Emergency shower</b> <span class="mono">ES-1</span></td><td>Encon (freestanding combo)</td></tr>
+          </tbody>
+        </table>
+        <div class="tnote">Emergency showers/eyewash: comply <span class="mono">ANSI/ISEA Z358.1</span> + ASSE <span class="mono">1071</span> mixing valve.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 08 ================= -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">08</span><span class="sec-t">IDENTIFICATION &amp; LABELING</span><span class="sec-s">SPEC 22 05 53</span></div>
+    <div class="g2">
+      <div class="stack">
+        <div>
+          <div class="sub">PIPE LABEL COLORS <em>— ASME A13.1</em></div>
+          <table class="g">
+            <colgroup><col style="width:33%"><col style="width:41%"><col style="width:26%"></colgroup>
+            <thead><tr><th>SYSTEM</th><th>BACKGROUND</th><th>LETTERS</th></tr></thead>
+            <tbody>
+              <tr><td><b>Domestic Water</b></td><td class="swrow"><span class="sw" style="background:#0e7a43"></span>Safety Green</td><td>White</td></tr>
+              <tr><td><b>Sanitary &amp; Storm</b></td><td class="swrow"><span class="sw" style="background:#000"></span>Safety Black</td><td>White</td></tr>
+              <tr><td><b>Compressed Air</b></td><td class="swrow"><span class="sw" style="background:#1d6fb8"></span>Safety Blue</td><td>White</td></tr>
+            </tbody>
+          </table>
+          <div class="tnote">Labels: at valves, branches, wall/floor penetrations (both sides), major equipment, and <b>every <span class="mono">25 ft</span></b> (<span class="mono">10 ft</span> in congested areas). Include size + flow arrow.</div>
+          <div class="tnote"><b>No lead-based primer/paint.</b></div>
+        </div>
+        <div>
+          <div class="sub">VALVE TAGS</div>
+          <table class="g">
+            <colgroup><col style="width:33%"><col style="width:67%"></colgroup>
+            <tbody>
+              <tr><td><b>Material</b></td><td>Brass <span class="mono">0.032"</span>, brass chain</td></tr>
+              <tr><td><b>Cold / Hot Water</b></td><td><span class="mono">2"</span> round · natural finish · white letters</td></tr>
+              <tr><td><b>Lettering</b></td><td><span class="mono">¼"</span> abbrev · <span class="mono">½"</span> number</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <div class="sub">UNDERGROUND WARNING TAPE <em>— APWA COLOR CODE</em></div>
+        <table class="g">
+          <colgroup><col style="width:35%"><col style="width:65%"></colgroup>
+          <thead><tr><th>COLOR</th><th>UTILITY</th></tr></thead>
+          <tbody>
+            <tr><td class="swrow"><span class="sw" style="background:#1d6fb8"></span>Blue</td><td>Water &amp; associated lines</td></tr>
+            <tr><td class="swrow"><span class="sw" style="background:#0e7a43"></span>Green</td><td>Sanitary &amp; associated lines</td></tr>
+            <tr><td class="swrow"><span class="sw" style="background:#d99a00"></span>Yellow</td><td>Gas &amp; associated lines</td></tr>
+            <tr><td class="swrow"><span class="sw" style="background:#7a3fb5"></span>Purple</td><td>Reclaimed water</td></tr>
+            <tr><td class="swrow"><span class="sw" style="background:#c1272d"></span>Red</td><td>Electric &amp; associated lines</td></tr>
+            <tr><td class="swrow"><span class="sw" style="background:#e07a1f"></span>Orange</td><td>Telecommunications</td></tr>
+            <tr><td class="swrow"><span class="sw" style="background:#7a5230"></span>Brown</td><td>Force mains</td></tr>
+          </tbody>
+        </table>
+        <div class="tnote">Tape <span class="mono">6"</span> wide, min <span class="mono">5 mil</span> thick w/ <span class="mono">0.35 mil</span> aluminum foil core (detectable). Bury <span class="mono">12"</span> below finished grade, directly above pipe. Marked &ldquo;CAUTION&rdquo; + service.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 09 ================= -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">09</span><span class="sec-t">TESTING &amp; STERILIZATION</span><span class="sec-s">SPEC 22 11 19 · 22 13 16</span></div>
+    <table class="g spined">
+      <colgroup><col style="width:22%"><col style="width:22%"><col style="width:28%"><col style="width:28%"></colgroup>
+      <thead><tr><th>SYSTEM</th><th>TEST</th><th>PRESSURE / HEAD</th><th>DURATION / ACCEPTANCE</th></tr></thead>
+      <tbody>
+        <tr><td class="spine s-green"><b>Domestic Water</b></td><td>Hydrostatic</td><td class="mono"><b>100 psig or 150% operating</b></td><td><span class="mono">4 hours</span> — no leaks</td></tr>
+        <tr><td class="spine s-char"><b>Sanitary &amp; Storm</b></td><td>Water test</td><td class="mono"><b>10 ft head min</b></td><td>Hold <span class="mono">30 min</span> before inspection</td></tr>
+        <tr><td class="spine s-char"><b>Sanitary &amp; Storm</b></td><td>Air test</td><td class="mono"><b>5 psi (= 10" mercury)</b></td><td><span class="mono">30 min</span>, no added air</td></tr>
+        <tr><td class="spine s-green"><b>Domestic Water</b></td><td>Sterilization</td><td class="mono"><b>Calcium hypochlorite</b></td><td>Hold <span class="mono">24 hr</span>, flush to <span class="mono">≥10 ppm</span> residual Cl</td></tr>
+      </tbody>
+    </table>
+    <div class="callout red">
+      <div class="blk">SEQUENCE</div>
+      <p>Complete <b>all field testing before insulation, wrapping, or backfill.</b> Leave concealed work uncovered until tested. No caulking / welding / sealing to fix failed joints — repair w/ new materials &amp; re-test.</p>
+    </div>
+  </div>
+
+  <!-- ================= 10 ================= -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">10</span><span class="sec-t">NATURAL GAS SYSTEMS</span><span class="sec-s">SPEC 22 70 00 · NFPA 54</span></div>
+    <div class="g13">
+      <div>
+        <div class="sub">PIPE MATERIAL BY PRESSURE &amp; LOCATION</div>
+        <div class="tnote" style="margin:0 0 3.5px"><span class="mono">&ldquo;Black steel, Sch 40&rdquo;</span> throughout = <span class="mono">ASTM A53/A53M</span>, Sch 40, Grade B, Type E or S.</div>
+        <table class="g spined">
+          <colgroup><col style="width:27%"><col style="width:31%"><col style="width:42%"></colgroup>
+          <thead><tr><th>LOCATION / PRESSURE</th><th>PIPE</th><th>JOINTS / FITTINGS</th></tr></thead>
+          <tbody>
+            <tr><td class="spine s-gold"><b>Inside</b> — all pressures</td><td>Black steel, Sch 40</td><td>Welded</td></tr>
+            <tr><td class="spine s-gold"><b>Outside</b> — all pressures</td><td>Black steel, Sch 40</td><td>Class 150 threaded malleable iron <b style="color:#b45309">⚠ NFPA 54: welded req'd &gt;5 psi</b></td></tr>
+            <tr><td class="spine s-gold"><b>Underground</b></td><td>Black steel, <b>epoxy-coated</b></td><td><b>Welded (socket fittings)</b></td></tr>
+          </tbody>
+        </table>
+        <div class="tnote">Min pipe size <span class="mono">¾"</span>. Threaded joints: UL-listed gas-rated Teflon tape/paste. Sediment traps/drips at low points &amp; each appliance.</div>
+        <div class="tnote"><b>Underground:</b> bury <span class="mono">24"</span> min below finished grade — if less than <span class="mono">36"</span>, install in ductile iron pipe containment conduit.</div>
+      </div>
+      <div class="stack">
+        <div>
+          <div class="sub">SYSTEM PRESSURE</div>
+          <table class="g">
+            <colgroup><col style="width:52%"><col style="width:48%"></colgroup>
+            <tbody>
+              <tr><td><b>In buildings</b></td><td class="mono"><b>4" WC to 2 psig</b></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="sub">VALVES</div>
+          <table class="g">
+            <colgroup><col style="width:38%"><col style="width:62%"></colgroup>
+            <tbody>
+              <tr><td><b>Gas cocks</b></td><td>Plug type, <span class="mono">≤1"</span> only, at each appliance</td></tr>
+              <tr><td><b>Ball <span class="mono">≤2"</span></b></td><td>Bronze, <span class="mono">600 psig WOG</span>, &ldquo;WOG&rdquo; marked</td></tr>
+              <tr><td><b>Plug <span class="mono">≥2½"</span></b></td><td>Flanged cast iron, <span class="mono">175 psig WOG</span></td></tr>
+              <tr><td><b>Check valve</b></td><td>Bronze swing</td></tr>
+              <tr><td><b>Shutoff</b></td><td>Within <span class="mono">72"</span> of each appliance + union</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="g2" style="margin-top:8px">
+      <div>
+        <div class="sub">HORIZONTAL HANGER SPACING — BLACK STEEL</div>
+        <table class="g">
+          <colgroup><col style="width:44%"><col style="width:36%"><col style="width:20%"></colgroup>
+          <thead><tr><th>PIPE SIZE (NPS)</th><th>MAX SPAN</th><th>ROD</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">½"</td><td class="mono"><b>6 ft</b></td><td class="mono">3/8"</td></tr>
+            <tr><td class="mono">¾"–1"</td><td class="mono"><b>96" (8 ft)</b></td><td class="mono">3/8"</td></tr>
+            <tr><td class="mono">1¼"</td><td class="mono"><b>108"</b></td><td class="mono">3/8"</td></tr>
+            <tr><td class="mono">1½"–2"</td><td class="mono"><b>108"</b></td><td class="mono">3/8"</td></tr>
+            <tr><td class="mono">2½"–3½"</td><td class="mono"><b>10 ft</b></td><td class="mono">1/2"</td></tr>
+            <tr><td class="mono">4"+</td><td class="mono"><b>10 ft</b></td><td class="mono">5/8"</td></tr>
+          </tbody>
+        </table>
+        <div class="tnote">Spacing = more stringent of 22 70 00 §3.8 or NFPA 54 §7.3.1 (§3.3.I). Support vertical piping at every floor.</div>
+      </div>
+      <div>
+        <div class="sub">PRESSURE TESTING</div>
+        <table class="g">
+          <colgroup><col style="width:47%"><col style="width:26%"><col style="width:27%"></colgroup>
+          <thead><tr><th>SYSTEM</th><th>TEST AIR</th><th>MIN TIME</th></tr></thead>
+          <tbody>
+            <tr><td><b>Low</b> <span class="mono">≤0.5 psig</span></td><td class="mono"><b>3 psig</b></td><td class="mono">1 hr</td></tr>
+            <tr><td><b>Medium</b> <span class="mono">0.5–3 psig</span></td><td class="mono"><b>100 psig</b></td><td class="mono">4 hr</td></tr>
+            <tr><td><b>High</b> <span class="mono">3–15 psig</span></td><td class="mono"><b>100 psig</b></td><td class="mono">4 hr</td></tr>
+          </tbody>
+        </table>
+        <div class="tnote">Radiography on all welds where pressure &gt;<span class="mono">3 psig</span>. Purge all piping after test; purge appliances after piping.</div>
+      </div>
+    </div>
+
+    <div class="callout red">
+      <div class="blk">GAS — DO NOT / MUST</div>
+      <ul>
+        <li><b>Do not</b> run gas in air ducts, chimneys/vents, shafts, solid walls, partitions, or concrete slabs.</li>
+        <li><b>Do not</b> use gas piping as a grounding electrode. Bond electrically continuous per NFPA 70.</li>
+        <li><b>Must:</b> 2-elbow swing on branches from risers · grade <span class="mono">2%</span> down to drips · <b>insulating coupling at underground-to-aboveground transition.</b></li>
+        <li><b>Color code (meter room):</b> <span class="mono">15–5 psi</span> = <b>brown</b> · reduced pressure = <b style="color:#d99a00">yellow</b>. Door sign: &ldquo;Gas Meter Room — No Storage Permitted&rdquo; (<span class="mono">1"</span> letters).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div>TPA AIRSIDE D / CCBS · PLUMBING FIELD CHEAT SHEET · DIV 22</div>
+    <div>FIELD QUICK-REFERENCE — GOVERNED BY FULL SPECIFICATION &amp; CONTRACT DRAWINGS</div>
+  </div>
+
+</div>
+</body>
+</html>

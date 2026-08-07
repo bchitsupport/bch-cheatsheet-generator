@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 120" role="img" aria-label="BCH Mechanical">
+  <title>BCH Mechanical</title>
+  <text x="0" y="70"
+        font-family="Arial Black, Arial Bold, Helvetica, sans-serif"
+        font-weight="900" font-size="76" letter-spacing="-1"
+        fill="#24356b">BCH</text>
+  <text x="2" y="100"
+        font-family="Arial, Helvetica, sans-serif"
+        font-weight="400" font-size="23" letter-spacing="3.4"
+        fill="#1a1d1f">MECHANICAL</text>
+  <rect x="0" y="107" width="300" height="4.5" fill="#1a1d1f"/>
+</svg>
