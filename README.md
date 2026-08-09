@@ -43,15 +43,33 @@ first, then Edge (always present on Windows). If neither is found, set
    Production, Preview, and Development.
 4. Deploy.
 
-### Function timeout
+### Function timeout — measured, not guessed
 
-`app/api/generate/route.ts` sets `maxDuration = 300`. That is honoured on **Vercel
-Pro**; on **Hobby** the ceiling is 60 seconds and long generations will be cut off.
+`app/api/generate/route.ts` sets `maxDuration = 300`, which is **Hobby's default
+and its hard maximum**. Pro allows up to 800s, but you must also raise that
+constant — it has to be a literal, so it cannot be read from an env var.
 
-The route streams NDJSON progress frames, so the client shows real progress the
-whole time and a timeout surfaces as a clear error rather than a hang. If you are
-staying on Hobby and hitting the limit, either upgrade to Pro or split the specs
-into two batches.
+A full Division 23 job (10 sections, ~185,000 characters) was timed end to end on
+identical input:
+
+| `ANTHROPIC_EFFORT` | Duration | Sheet pages | Discrepancies found | Fits Hobby (300s) |
+|---|---|---|---|---|
+| `medium` | 243s | 4 | 7 | yes, ~57s spare |
+| `high` (default) | 495s | 5 | 11 | no |
+
+So on Hobby, a full Division 23 run needs `ANTHROPIC_EFFORT=medium`. The cost is
+real: `high` found 57% more discrepancies on the same specs, and discrepancies are
+the point of the checklist.
+
+**On Pro**, set `ANTHROPIC_EFFORT=high` (or leave it unset) and change
+`maxDuration` to `800` in `app/api/generate/route.ts`. Don't set 800 while on
+Hobby — a `maxDuration` above the plan limit fails the deployment.
+
+Division 22 is much smaller and fits comfortably either way.
+
+The route streams NDJSON progress frames, so a timeout surfaces as a clear error
+naming the elapsed seconds rather than hanging. If the elapsed time is very close
+to the platform ceiling, that is what you are hitting.
 
 ---
 
