@@ -14,7 +14,23 @@ import type { Division } from './upload-lists';
  * ANTHROPIC_MODEL if you want to pin a different one.
  */
 const MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-5';
-const EFFORT = (process.env.ANTHROPIC_EFFORT ?? 'high') as
+
+/**
+ * Defaults to `medium`, not `high`, because the deployment target cannot run
+ * `high` at all.
+ *
+ * Timed on a full Division 23 job (10 sections, ~185k chars of spec text):
+ *
+ *   medium  243s   4-page sheet    7 discrepancies
+ *   high    495s   5-page sheet   11 discrepancies
+ *
+ * Vercel Hobby's function ceiling is 300s — its maximum, not a raisable default —
+ * so `high` is not a choice there, it is a guaranteed timeout. `medium` finds
+ * fewer conflicts, which is a real cost on a document whose job is finding
+ * conflicts. On Vercel Pro (800s), set ANTHROPIC_EFFORT=high and raise
+ * `maxDuration` in app/api/generate/route.ts to 800.
+ */
+const EFFORT = (process.env.ANTHROPIC_EFFORT ?? 'medium') as
   | 'low'
   | 'medium'
   | 'high'

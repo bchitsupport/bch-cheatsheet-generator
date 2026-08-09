@@ -57,13 +57,14 @@ identical input:
 | `medium` | 243s | 4 | 7 | yes, ~57s spare |
 | `high` (default) | 495s | 5 | 11 | no |
 
-So on Hobby, a full Division 23 run needs `ANTHROPIC_EFFORT=medium`. The cost is
-real: `high` found 57% more discrepancies on the same specs, and discrepancies are
-the point of the checklist.
+**The app therefore defaults to `medium`**, so a Hobby deployment works with no
+environment variable set at all. The cost is real: `high` found 57% more
+discrepancies on the same specs, and discrepancies are the point of the checklist.
+`.env.local` sets `ANTHROPIC_EFFORT=high` for local runs, where no ceiling applies.
 
-**On Pro**, set `ANTHROPIC_EFFORT=high` (or leave it unset) and change
-`maxDuration` to `800` in `app/api/generate/route.ts`. Don't set 800 while on
-Hobby — a `maxDuration` above the plan limit fails the deployment.
+**On Pro**, set `ANTHROPIC_EFFORT=high` in the Vercel environment variables and
+change `maxDuration` to `800` in `app/api/generate/route.ts`. Don't set 800 while
+on Hobby — a `maxDuration` above the plan limit fails the deployment.
 
 Division 22 is much smaller and fits comfortably either way.
 
