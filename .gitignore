@@ -24,3 +24,6 @@ Thumbs.db
 # you want them version-controlled.
 Pictures/
 BCH Address and phone numbers/
+
+# local timing probes
+probe-*.mjs
