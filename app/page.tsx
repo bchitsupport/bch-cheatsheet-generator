@@ -30,6 +30,7 @@ export default function NewSheetPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [storageNote, setStorageNote] = useState<string | null>(null);
+  const [elapsed, setElapsed] = useState(0);
 
   const resultsRef = useRef<HTMLDivElement>(null);
 
@@ -84,6 +85,7 @@ export default function NewSheetPage() {
     setStep('extract');
 
     const startedAt = Date.now();
+    setElapsed(0);
 
     try {
       const res = await fetch('/api/generate', {
@@ -95,7 +97,7 @@ export default function NewSheetPage() {
       if (!res.body) {
         throw new Error(
           res.status === 504
-            ? 'The server timed out. On Vercel Hobby the limit is 60 seconds — upgrade to Pro, or split the specs into two batches.'
+            ? 'The server timed out before sending anything. The generation exceeded the hosting time limit — split the specs into two batches, or raise the plan limit.'
             : `Request failed (${res.status}).`,
         );
       }
@@ -112,6 +114,10 @@ export default function NewSheetPage() {
             break;
           case 'warning':
             setWarnings((prev) => [...prev, event.message]);
+            break;
+          case 'heartbeat':
+            // Proof of life during the multi-minute model call.
+            setElapsed(Math.round(event.elapsedMs / 1000));
             break;
           case 'done': {
             finished = true;
@@ -225,6 +231,7 @@ export default function NewSheetPage() {
               done={Boolean(result)}
               failed={Boolean(error)}
               warnings={warnings}
+              elapsed={elapsed}
             />
           )}
 

@@ -7,17 +7,27 @@ export default function ProgressSteps({
   done,
   failed,
   warnings,
+  elapsed,
 }: {
   current: ProgressStepKey | null;
   done: boolean;
   failed: boolean;
   warnings: string[];
+  /** Seconds since the request started, from the server's heartbeat. */
+  elapsed?: number;
 }) {
   const currentIndex = current ? PROGRESS_STEPS.findIndex((s) => s.key === current) : -1;
 
   return (
     <section>
-      <h2 className="section-title mb-3">Progress</h2>
+      <div className="mb-3 flex items-baseline justify-between">
+        <h2 className="section-title">Progress</h2>
+        {!done && !failed && elapsed !== undefined && elapsed > 0 && (
+          <span className="font-mono text-xs text-bch-muted">
+            {Math.floor(elapsed / 60)}m {String(elapsed % 60).padStart(2, '0')}s elapsed
+          </span>
+        )}
+      </div>
 
       <div className="card p-5">
         <ol className="space-y-3">

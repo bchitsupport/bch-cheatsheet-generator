@@ -80,6 +80,14 @@ export type ProgressStepKey = (typeof PROGRESS_STEPS)[number]['key'];
 export type GenerateEvent =
   | { type: 'step'; step: ProgressStepKey }
   | { type: 'warning'; message: string }
+  /**
+   * Emitted every few seconds while the model is working. The generation step
+   * produces no output of its own for minutes at a time, and a stream that goes
+   * silent that long gets dropped by proxies between the browser and the
+   * function — observed as an ECONNRESET ~40s into a live request. These frames
+   * keep bytes flowing and drive the elapsed-time readout.
+   */
+  | { type: 'heartbeat'; elapsedMs: number }
   | { type: 'done'; result: GenerationResult }
   | { type: 'error'; message: string };
 

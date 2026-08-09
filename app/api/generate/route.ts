@@ -23,6 +23,29 @@ export async function POST(request: Request) {
       const send = (event: GenerateEvent) =>
         controller.enqueue(encoder.encode(JSON.stringify(event) + '\n'));
 
+      const startedAt = Date.now();
+
+      /**
+       * Keeps the response stream from going silent. The model call runs for
+       * minutes without emitting anything, and an idle stream is dropped by
+       * proxies between the browser and the function (seen live as ECONNRESET
+       * ~40s in). Ten seconds is comfortably inside any common idle timeout.
+       */
+      let heartbeat: ReturnType<typeof setInterval> | undefined;
+      const startHeartbeat = () => {
+        heartbeat ??= setInterval(() => {
+          try {
+            send({ type: 'heartbeat', elapsedMs: Date.now() - startedAt });
+          } catch {
+            stopHeartbeat(); // stream already closed
+          }
+        }, 10_000);
+      };
+      const stopHeartbeat = () => {
+        if (heartbeat) clearInterval(heartbeat);
+        heartbeat = undefined;
+      };
+
       try {
         const body = (await request.json()) as GenerateBody;
 
@@ -86,7 +109,9 @@ export async function POST(request: Request) {
 
         // --- 2 + 3. Read the specs and write the sheet (one model call)
         send({ type: 'step', step: 'read' });
+        startHeartbeat();
         const output = await generateSheet(division, project, specs);
+        stopHeartbeat();
 
         if (output.recoveredChecklist) {
           const warning =
@@ -100,12 +125,15 @@ export async function POST(request: Request) {
 
         send({ type: 'step', step: 'generate' });
 
-        // --- 4 + 5. Render both documents in one browser
+        // --- 4 + 5. Render both documents in one browser. Chromium's cold
+        // start on a serverless host is slow enough to be worth covering too.
         send({ type: 'step', step: 'render' });
+        startHeartbeat();
         const [cheatsheet, checklist] = await renderAll([
           output.cheatsheetHtml,
           output.checklistHtml,
         ]);
+        stopHeartbeat();
 
         send({ type: 'step', step: 'checklist' });
         const pageCount = await countPdfPages(cheatsheet);
@@ -127,6 +155,7 @@ export async function POST(request: Request) {
           message: err instanceof Error ? err.message : 'Generation failed.',
         });
       } finally {
+        stopHeartbeat();
         controller.close();
       }
     },
