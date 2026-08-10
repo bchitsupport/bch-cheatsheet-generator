@@ -13,24 +13,40 @@ import type { Division } from './upload-lists';
  * `claude-sonnet-5` is the current Sonnet and is a drop-in for it. Override with
  * ANTHROPIC_MODEL if you want to pin a different one.
  */
-const MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-5';
+/**
+ * Quality is capped by where the code runs, so the defaults follow the host.
+ *
+ * Locally there is no function time limit, so the default is the strongest
+ * configuration: Opus for the reasoning, high effort for thoroughness. On Vercel
+ * the function is killed at 300s (Hobby's maximum), which that configuration
+ * cannot finish inside — so a deployed run falls back to Sonnet at medium.
+ *
+ * Deciding this from `process.env.VERCEL` rather than requiring dashboard
+ * variables means neither side can be silently misconfigured: a local run always
+ * gets the best sheet, and a deploy always stays inside its ceiling. Either can
+ * still be overridden with ANTHROPIC_MODEL / ANTHROPIC_EFFORT.
+ */
+const ON_SERVERLESS = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+const MODEL =
+  process.env.ANTHROPIC_MODEL ?? (ON_SERVERLESS ? 'claude-sonnet-5' : 'claude-opus-5');
 
 /**
- * Defaults to `medium`, not `high`, because the deployment target cannot run
- * `high` at all.
- *
- * Timed on a full Division 23 job (10 sections, ~185k chars of spec text):
+ * Timed on a full Division 23 job (10 sections, ~185k chars of spec text),
+ * Sonnet 5:
  *
  *   medium  243s   4-page sheet    7 discrepancies
  *   high    495s   5-page sheet   11 discrepancies
  *
- * Vercel Hobby's function ceiling is 300s — its maximum, not a raisable default —
- * so `high` is not a choice there, it is a guaranteed timeout. `medium` finds
- * fewer conflicts, which is a real cost on a document whose job is finding
- * conflicts. On Vercel Pro (800s), set ANTHROPIC_EFFORT=high and raise
- * `maxDuration` in app/api/generate/route.ts to 800.
+ * Effort drives how thoroughly the specs are cross-checked, so it is the main
+ * lever on discrepancy coverage — the whole point of the checklist. Locally that
+ * is worth the extra minutes; on Vercel Hobby's 300s ceiling `high` is not a
+ * choice, it is a guaranteed timeout.
+ *
+ * On Vercel Pro (800s), set ANTHROPIC_EFFORT=high and raise `maxDuration` in
+ * app/api/generate/route.ts to 800.
  */
-const EFFORT = (process.env.ANTHROPIC_EFFORT ?? 'medium') as
+const EFFORT = (process.env.ANTHROPIC_EFFORT ?? (ON_SERVERLESS ? 'medium' : 'high')) as
   | 'low'
   | 'medium'
   | 'high'
@@ -140,9 +156,17 @@ RULES:
 
 SHEET SHAPE:
 - Target 3 to 5 letter pages of dense, tabular content.
-- Number sections 01, 02, 03... in install order: materials, joints, hangers,
-  insulation, then the system-specific sections, then identification, then
-  testing.
+- The section outline is FIXED and supplied in the user message. Use exactly
+  those sections, with those titles, in that order, numbered 01, 02, 03...
+  Do not add, rename, reorder, merge or split them. The same specs must produce
+  the same sheet skeleton every time so two sheets can be compared and a fitter
+  learns where things live.
+- Put content in the section the outline says it belongs to, even if you would
+  have grouped it differently.
+- If a section has no supporting spec content, still emit the section head, put
+  a single "Not covered by the sections provided — see discrepancy log." note in
+  it, and log a discrepancy naming the CSI section that would have supplied it.
+  Do not silently drop it.
 - Every section head carries the CSI numbers it draws from in .sec-s.
 - Prefer tables over prose. A paragraph on this sheet is a failure unless it is
   a callout.
@@ -198,7 +222,20 @@ The division and project details for this job arrive in the user message.`;
 /** Job specifics — goes in the user turn so the cached system prefix stays stable. */
 function buildJobHeader(division: Division, project: ProjectInfo): string {
   const orBlank = (v: string, fallback: string) => (v.trim() ? v : fallback);
-  return `DIVISION: ${division.name}
+
+  const outline = division.outline
+    .map(
+      (s, i) =>
+        `${String(i + 1).padStart(2, '0')}  ${s.title}\n` +
+        `      spec refs: ${s.sources.join(' · ')}\n` +
+        `      covers:    ${s.covers}`,
+    )
+    .join('\n');
+
+  return `REQUIRED SECTION OUTLINE — use exactly these, in this order:
+${outline}
+
+DIVISION: ${division.name}
 BANNER TITLE: ${division.bannerTitle}
 BANNER SUBTITLE: FIELD CHEAT SHEET · ${division.divisionLabel}
 FOOTER DIVISION: ${division.divisionShort}
