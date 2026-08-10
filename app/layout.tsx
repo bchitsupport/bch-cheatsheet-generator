@@ -10,9 +10,20 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // suppressHydrationWarning goes on <html> and <body> only. Browser extensions
+  // stamp attributes onto these two elements before React hydrates — Trancy adds
+  // trancy-version, Grammarly and password managers do similar — and React
+  // reports that as a hydration mismatch the app has no way to prevent.
+  //
+  // Deliberately not applied further down the tree: the flag covers only these
+  // elements' own attributes, not their children, so a genuine hydration bug in
+  // the app still surfaces.
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-bch-bg text-bch-ink antialiased">
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className="min-h-screen bg-bch-bg text-bch-ink antialiased"
+        suppressHydrationWarning
+      >
         <div className="flex h-screen flex-col">
           <header className="flex h-[64px] shrink-0 items-center justify-between border-b border-bch-line bg-white px-6">
             <div>
