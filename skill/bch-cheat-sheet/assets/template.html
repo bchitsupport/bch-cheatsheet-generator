@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{SHEET_TITLE}} — {{PROJECT}}</title>
+<!--
+  BCH MECHANICAL FIELD CHEAT SHEET — MASTER TEMPLATE
+  Do not change anything in <style>. Every value below was measured from the
+  approved Division 22 sheet. Replace only the {{PLACEHOLDERS}} and the
+  content inside <body>. See references/design-spec.md if a value ever needs
+  to be re-derived.
+-->
+<style>
+@page { size: letter; margin: 28.5pt; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root{
+  --ink:#1a1d1f;
+  --ink2:#3a3f42;
+  --muted:#6b7280;
+  --bd:#b7b3a8;
+  --bd2:#d9d6ce;
+  --cream:#f6f5f0;
+  --cream2:#f1efe8;
+  --sheet:#fafaf8;
+  --green:#0e7a43;
+  --blue:#1d6fb8;
+  --char:#33383b;
+  --amber:#b45309;
+  --gold:#d99a00;
+  --red:#c1272d;
+  --redbg:#fbeaea;
+  --cond:"DejaVu Sans Condensed","DejaVu Sans",sans-serif;
+  --mono:"DejaVu Sans Mono",monospace;
+  --sans:"Liberation Sans",Arial,sans-serif;
+}
+
+html,body{ background:#fff; }
+body{
+  font-family:var(--sans);
+  font-size:6.9pt;
+  line-height:1.25;
+  color:var(--ink);
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
+.sheet{ background:var(--sheet); }
+
+.mono{ font-family:var(--mono); }
+b,strong{ font-weight:bold; }
+
+/* ============ BANNER ============ */
+.banner{ background:var(--ink); color:#fff; padding:10px 15px 9px; }
+.brow{ display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
+.brand{ font-family:var(--cond); font-weight:bold; font-size:19.5pt; line-height:0.96; letter-spacing:0.2px; }
+.addr{ font-family:var(--mono); font-size:7.04pt; line-height:1.385; text-align:right; color:#e8e8e6; white-space:nowrap; }
+.bdiv{ height:0.75pt; background:var(--ink2); margin:8px 0 9px; }
+.brow2{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; }
+.ptitle{ font-family:var(--cond); font-weight:bold; font-size:16.5pt; line-height:1.0; }
+.psub{ font-family:var(--cond); font-weight:bold; font-size:9.37pt; line-height:1.0; letter-spacing:1.6px; color:#e8e8e6; margin-top:2px; }
+.meta{ font-family:var(--mono); font-size:7.04pt; line-height:1.385; text-align:right; color:#e8e8e6; white-space:nowrap; }
+.meta .m1{ font-weight:bold; color:#fff; }
+.meta .m5{ color:#b9b9b5; }
+
+/* ============ COLOR STRIP ============ */
+.strip{ display:flex; height:5.25pt; }
+.strip i{ flex:1 1 20%; }
+
+/* ============ PANEL ============ */
+.panel{ background:#fff; border:0.75pt solid var(--bd); margin-top:10.5pt; }
+.panel-h{ background:var(--cream2); border-bottom:0.75pt solid var(--bd); padding:4px 10px; font-family:var(--cond); font-weight:bold; font-size:9.75pt; line-height:1.15; letter-spacing:0.3px; }
+.panel-h em{ font-family:var(--cond); font-weight:normal; font-style:normal; font-size:7.5pt; color:var(--muted); letter-spacing:0.3px; }
+.panel-b{ padding:6px 10px 6.5px; }
+
+.keys{ display:flex; flex-wrap:wrap; column-gap:16px; row-gap:5px; }
+.key{ display:flex; align-items:center; gap:5px; font-size:7.87pt; line-height:1.0; }
+.badge{
+  display:inline-block; font-family:var(--mono); font-weight:bold; font-size:7.87pt;
+  line-height:11px; color:#fff; background:var(--char); border-radius:2px;
+  padding:2px 5px; min-width:16px; text-align:center;
+}
+.b-green{background:var(--green)} .b-blue{background:var(--blue)} .b-char{background:var(--char)}
+.b-amber{background:var(--amber)} .b-gold{background:var(--gold)}
+.keynote{ font-size:6.9pt; line-height:1.3; margin-top:7px; }
+
+/* ============ SECTION HEAD ============ */
+.sec{ margin-top:9px; }
+.sec-head{ display:flex; align-items:baseline; border-bottom:1.5pt solid var(--ink); padding-bottom:7px; margin-bottom:6px; break-after:avoid; }
+.sec-num{ font-family:var(--mono); font-weight:bold; font-size:8.25pt; line-height:11px; color:#fff; background:var(--ink); border-radius:2px; padding:3px 7px; align-self:center; }
+.sec-t{ font-family:var(--cond); font-weight:bold; font-size:11.25pt; line-height:1.0; letter-spacing:0.4px; margin-left:7.5pt; }
+.sec-s{ margin-left:auto; font-family:var(--mono); font-size:7.12pt; color:var(--muted); letter-spacing:0.3px; }
+
+/* ============ TABLES ============ */
+table.g{ width:100%; border-collapse:collapse; background:#fff; border:0.75pt solid var(--bd); table-layout:fixed; break-inside:auto; }
+table.g thead{ display:table-header-group; }
+table.g tr{ break-inside:avoid; }
+table.g th{
+  background:var(--ink); color:#fff; font-family:var(--cond); font-weight:bold; font-size:7.04pt;
+  line-height:1.04; text-align:left; padding:2px 4.5px; letter-spacing:0.3px;
+  border-right:0.75pt solid var(--ink2);
+}
+table.g th:last-child{ border-right:0; }
+table.g td{ padding:2px 4.5px; border-right:0.75pt solid var(--bd2); border-top:0.75pt solid var(--bd2); vertical-align:top; }
+table.g td:last-child{ border-right:0; }
+table.g tbody tr:first-child td{ border-top:0; }
+table.g tbody tr:nth-child(even){ background:var(--cream); }
+table.g td.mid{ vertical-align:middle; }
+.c{ text-align:center; }
+
+/* spine */
+.spine{ border-left:3pt solid transparent; }
+.s-green{ border-left-color:var(--green) } .s-blue{ border-left-color:var(--blue) }
+.s-char{ border-left-color:var(--char) } .s-amber{ border-left-color:var(--amber) }
+.s-gold{ border-left-color:var(--gold) }
+table.spined{ border-left:0; }
+
+.sysc{ display:flex; align-items:center; gap:5px; }
+.sysc b{ font-size:6.9pt; }
+.svc{ display:block; }
+.svc .badge{ margin-left:5px; vertical-align:-2px; }
+
+/* sub headings */
+.sub{ font-family:var(--cond); font-weight:bold; font-size:8.62pt; letter-spacing:0.4px; margin:0 0 3px; line-height:1.1; break-after:avoid; }
+.sub em{ font-family:var(--cond); font-weight:normal; font-style:normal; font-size:7.5pt; color:var(--muted); }
+.blk{ font-family:var(--cond); font-weight:bold; font-size:9.0pt; letter-spacing:0.4px; margin:0 0 4px; line-height:1.15; }
+
+.note{ font-size:7.2pt; line-height:1.45; margin-top:4px; color:var(--ink); }
+.note.sm{ font-size:6.9pt; }
+.note .g{ color:var(--muted); }
+.tnote{ font-size:6.9pt; line-height:1.4; margin-top:3.5px; color:var(--muted); }
+
+/* callouts */
+.callout{ background:var(--cream2); border-left:3pt solid var(--muted); padding:6px 10px 7px; margin-top:8px; break-inside:avoid; }
+.callout.red{ background:var(--redbg); border-left-color:var(--red); }
+.callout.red .blk{ color:var(--red); }
+.callout ul{ list-style:none; }
+.callout li{ font-size:7.2pt; line-height:1.5625; padding-left:12px; position:relative; }
+.callout li:before{ content:"•"; position:absolute; left:3px; }
+.callout p{ font-size:7.2pt; line-height:1.45; }
+
+/* grids */
+.g2{ display:grid; grid-template-columns:1fr 1fr; gap:6.75pt; align-items:start; }
+.g13{ display:grid; grid-template-columns:1.3fr 1fr; gap:6.75pt; align-items:start; }
+.stack>*+*{ margin-top:8px; }
+
+/* mini two-column spacing table (§03) */
+table.mini{ width:100%; border-collapse:collapse; table-layout:fixed; }
+table.mini td{
+  font-family:var(--mono); font-size:6.9pt; padding:1.5px 4px;
+  border-top:0.75pt solid var(--bd2); border-right:0.75pt solid var(--bd2); vertical-align:top;
+}
+table.mini td:last-child{ border-right:0; }
+table.mini tr:first-child td{ border-top:0; }
+
+/* swatches */
+.sw{ display:inline-block; width:11.25pt; height:8.25pt; border-radius:1.5px; vertical-align:-1px; margin-right:5px; }
+.swrow{ font-size:7.87pt; }
+
+/* footer */
+.foot{ display:flex; justify-content:space-between; gap:16px; border-top:0.75pt solid var(--bd); margin-top:10px; padding-top:6px; font-family:var(--mono); font-size:6.75pt; line-height:1.35; color:var(--muted); letter-spacing:0.3px; }
+.foot div:last-child{ text-align:right; }
+
+.avoid{ break-inside:avoid; }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <!-- ============================================================
+       BANNER  —  identical on every sheet except {{DIVISION_TITLE}},
+       {{DIVISION_SUB}}, {{PROJECT}}, {{PROJECT_SUB}} and the preparer line.
+       Never add a revision label here or in the footer.
+       ============================================================ -->
+  <div class="banner">
+    <div class="brow">
+      <div class="brand">BCH MECHANICAL,<br>L.L.C.</div>
+      <div class="addr">
+        6354 118th Avenue North · Largo, FL 33773<br>
+        P: 727-546-3561<br>
+        F: 727-545-1801<br>
+        Toll Free F: 1-866-523-5750
+      </div>
+    </div>
+    <div class="bdiv"></div>
+    <div class="brow2">
+      <div>
+        <div class="ptitle">{{DIVISION_TITLE}}</div>
+        <div class="psub">{{DIVISION_SUB}}</div>
+      </div>
+      <div class="meta">
+        <div class="m1">{{PROJECT}}</div>
+        <div>{{PROJECT_SUB}}</div>
+        <div>Prepared by {{PREPARER}} · {{PREPARER_TITLE}}</div>
+        <div>{{PREPARER_EMAIL}}</div>
+        <div class="m5">Quick-ref — verify against full spec &amp; drawings</div>
+      </div>
+    </div>
+  </div>
+  <div class="strip">
+    <i style="background:#0e7a43"></i><i style="background:#1d6fb8"></i><i style="background:#33383b"></i><i style="background:#b45309"></i><i style="background:#d99a00"></i>
+  </div>
+
+  <!-- ============================================================
+       KEY PANEL — system abbreviations, full width.
+       Badge color = the system's spine color (see references/design-spec.md).
+       ============================================================ -->
+  <div class="panel avoid">
+    <div class="panel-h">SYSTEM ABBREVIATIONS &amp; COLOR KEY <em>— ABBREVS PER {{LEGEND_DRAWING}}</em></div>
+    <div class="panel-b">
+      <div class="keys">
+        <div class="key"><span class="badge b-green">XX</span>System name</div>
+        <div class="key"><span class="badge b-blue">YY</span>System name</div>
+        <div class="key"><span class="badge b-char">ZZ</span>System name</div>
+        <!-- ...one .key per abbreviation on the legend drawing... -->
+      </div>
+      <div class="keynote">⚠ <b>Band colors are for finding sections on this sheet only</b> — they are not what you install. For actual
+      pipe-label &amp; underground-tape colors, see <b>Section {{ID_SECTION_NO}} — Identification &amp; Labeling</b>.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION — repeat this block. Number sections 01..NN in reading order.
+       ============================================================ -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">01</span><span class="sec-t">SECTION TITLE</span><span class="sec-s">SPEC 23 21 13 · 23 05 29</span></div>
+
+    <!-- FULL-WIDTH TABLE with colored system spines -->
+    <table class="g spined">
+      <colgroup><col style="width:18%"><col style="width:19.5%"><col style="width:19.5%"><col style="width:19.5%"><col style="width:23.5%"></colgroup>
+      <thead><tr><th>SYSTEM</th><th>COL 2</th><th>COL 3</th><th>COL 4</th><th>NOTES</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="spine s-green mid"><span class="sysc"><span class="badge b-green">XX</span><b>System Name</b></span></td>
+          <td>Value</td><td>Value</td><td>Value</td>
+          <td>Note text. Wrap standards in <span class="mono">ASTM A53</span> mono.</td>
+        </tr>
+        <tr>
+          <td class="spine s-blue mid"><span class="sysc"><span class="badge b-blue">YY</span><b>System Name</b></span></td>
+          <td>Value</td><td>Value</td><td>Value</td>
+          <td style="color:#c1272d"><b>Red text = a rule someone gets wrong in the field.</b></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- RED CALLOUT — prohibitions and hard sequencing rules only -->
+    <div class="callout red">
+      <div class="blk">DO NOT</div>
+      <ul>
+        <li>Prohibition one.</li>
+        <li>Prohibition two.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       TWO-COLUMN SECTION — .g2 = 1fr/1fr · .g13 = 1.3fr/1fr
+       Use .stack on a column holding more than one block.
+       ============================================================ -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">02</span><span class="sec-t">TWO-COLUMN SECTION</span><span class="sec-s">SPEC 23 xx xx</span></div>
+    <div class="g2">
+      <div class="stack">
+        <div>
+          <div class="sub">SUB-HEADING <em>— QUALIFIER</em></div>
+          <table class="g">
+            <colgroup><col style="width:40%"><col style="width:60%"></colgroup>
+            <thead><tr><th>COL</th><th>COL</th></tr></thead>
+            <tbody>
+              <tr><td><b>Label</b></td><td class="mono"><b>Value</b></td></tr>
+              <tr><td><b>Label</b></td><td class="mono"><b>Value</b></td></tr>
+            </tbody>
+          </table>
+          <div class="tnote">Small grey note under a table.</div>
+        </div>
+        <!-- SWATCH ROW pattern (color tables) -->
+        <div>
+          <div class="sub">COLOR TABLE</div>
+          <table class="g">
+            <colgroup><col style="width:40%"><col style="width:60%"></colgroup>
+            <thead><tr><th>COLOR</th><th>USE</th></tr></thead>
+            <tbody>
+              <tr><td class="swrow"><span class="sw" style="background:#1d6fb8"></span>Blue</td><td>Description</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="stack">
+        <!-- NEUTRAL CALLOUT — reference info, heading goes INSIDE the box -->
+        <div class="callout">
+          <div class="blk">CALLOUT HEADING</div>
+          <ul>
+            <li>Bullet.</li>
+          </ul>
+          <div class="note"><b>Lead-in:</b> follow-on note inside the same box.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       NESTED MINI-TABLE — for when a rowspan cell needs its own
+       size→value pairs that don't line up with the parent rows.
+       Parent th's carry the labels; the mini table carries no header.
+       ============================================================ -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">03</span><span class="sec-t">MATRIX WITH NESTED PAIRS</span><span class="sec-s">SPEC 23 05 29</span></div>
+    <table class="g spined">
+      <colgroup><col style="width:13.8%"><col style="width:8%"><col style="width:5.4%"><col style="width:14%"><col style="width:31.3%"><col style="width:27.5%"></colgroup>
+      <thead><tr><th>MATERIAL</th><th>SIZE</th><th>ROD</th><th>PIPE SIZE</th><th>MAX HORIZ. SPACING</th><th>VERT.</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="spine s-char" rowspan="2">Material</td>
+          <td class="mono">≤6"</td><td class="mono"><b>3/8"</b></td>
+          <td rowspan="2" colspan="2" style="padding:0">
+            <table class="mini"><colgroup><col style="width:30.9%"><col style="width:69.1%"></colgroup>
+              <tr><td>≤1¼"</td><td><b>5 ft</b></td></tr>
+              <tr><td>1½"+</td><td><b>6 ft</b></td></tr>
+            </table>
+          </td>
+          <td rowspan="2" class="mono">Every story</td>
+        </tr>
+        <tr><td class="mono">8"–12"</td><td class="mono"><b>1/2"</b></td></tr>
+      </tbody>
+    </table>
+    <div class="note sm"><b>Lead-in:</b> full-width note under a table.</div>
+  </div>
+
+  <!-- ============================================================
+       FOOTER — last element. No revision label, ever.
+       ============================================================ -->
+  <div class="foot">
+    <div>{{PROJECT}} · {{DIVISION_TITLE}} FIELD CHEAT SHEET · {{DIVISION_SHORT}}</div>
+    <div>FIELD QUICK-REFERENCE — GOVERNED BY FULL SPECIFICATION &amp; CONTRACT DRAWINGS</div>
+  </div>
+
+</div>
+</body>
+</html>

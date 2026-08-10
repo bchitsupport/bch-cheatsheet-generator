@@ -27,3 +27,6 @@ BCH Address and phone numbers/
 
 # local timing probes
 probe-*.mjs
+
+# built skill package - regenerate with Compress-Archive
+skill/bch-cheat-sheet.zip
