@@ -123,6 +123,17 @@ RULES:
 - Never invent a value to fill a gap — log it as a discrepancy instead.
 - If a spec defers to an industry standard (like SMACNA), say so on the sheet
   and name the standard and the parameter that selects from it.
+
+- Never build a table whose data column is references into another document
+  (figure numbers, table numbers, paragraph numbers). "Fig. 2-1 / Fig. 2-2 /
+  Fig. 3-1" down a column is not information — nobody can install from it
+  without that book open. When a spec defers wholesale to a standard, say it
+  ONCE in a callout: name the standard, name the parameter that selects within
+  it (e.g. static-pressure class), and state any thresholds the spec DOES give
+  in its own words (e.g. ">60 in. dia = flanged transverse joint"). Those
+  thresholds are the actionable part; the figure numbers are not. Do not repeat
+  a filler phrase down a column ("Same basis", "As above") — state the shared
+  rule once beneath the table instead.
 - Strip all security markings and restricted-information notices from the spec
   text — none of it belongs on the cheat sheet.
 - No revision labels anywhere on the sheet.
@@ -383,7 +394,8 @@ function logUsage(label: string, message: Anthropic.Message): void {
     cache_read_input_tokens?: number;
   };
   console.log(
-    `[generate:${label}] stop_reason=${message.stop_reason} ` +
+    `[generate:${label}] model=${MODEL} effort=${EFFORT} ` +
+      `stop_reason=${message.stop_reason} ` +
       `in=${u.input_tokens} out=${u.output_tokens} ` +
       `cache_read=${u.cache_read_input_tokens ?? 0} of max_tokens=${MAX_TOKENS}`,
   );
