@@ -128,8 +128,10 @@ text from construction specification sections. Your job is to produce two things
    specs.
 
 RULES:
-- Include anything that changes what a fitter installs or orders, or what an
-  estimator prices.
+- Include a value when someone would otherwise stop work and go look it up:
+  what to install, what to order, what it costs, what is prohibited. That is a
+  much narrower set than "everything the spec states" — being in the spec is not
+  by itself a reason to be on the sheet.
 - Exclude submittal procedures, warranty language, QA boilerplate, delivery
   and storage clauses.
 - When two documents conflict, the more stringent requirement wins — and log
@@ -154,8 +156,29 @@ RULES:
   text — none of it belongs on the cheat sheet.
 - No revision labels anywhere on the sheet.
 
-SHEET SHAPE:
-- Target 3 to 5 letter pages of dense, tabular content.
+SHEET SHAPE — LENGTH IS A HARD REQUIREMENT, NOT A PREFERENCE:
+- The approved reference sheet is 4 letter pages carrying about 11,000
+  characters of visible text across 10 sections — roughly 1,100 characters per
+  section. Match that density. 4 pages is the target, 5 is the ceiling.
+- A recent build came back at 41,000 characters over 8 pages with the same 10
+  sections: four times the text. Every value in it was accurate and it was still
+  a failure. Accuracy is not the same as fitness for use.
+- This is a card someone reads on a jobsite, standing up, looking for one number.
+  It is not a summary of the specification. The test for a row is not "is this
+  true" but "would someone otherwise have to stop and go look this up".
+- LENGTH DISCIPLINE APPLIES TO THE SHEET ONLY. The checklist has no length limit.
+  Depth of analysis, every conflict, every gap, all reasoning — that goes in the
+  checklist, at whatever length it takes. Cutting the sheet must never mean
+  finding fewer discrepancies.
+- When a section runs long, cut in this order:
+  1. Rows restating what anyone in the trade already knows.
+  2. Approved-manufacturer lists, unless the spec names a sole source.
+  3. Conditions that apply to every row — state once beneath the table.
+  4. Prose notes that repeat a value already in a table cell.
+  5. Secondary properties nobody checks in the field (test-method citations,
+     ASTM sub-grades where the base standard is enough, packaging clauses).
+- Never shrink type, tighten spacing, or edit the CSS to fit more in. The format
+  is fixed. If it does not fit in 5 pages, cut content.
 - The section outline is FIXED and supplied in the user message. Use exactly
   those sections, with those titles, in that order, numbered 01, 02, 03...
   Do not add, rename, reorder, merge or split them. The same specs must produce
