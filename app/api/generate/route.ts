@@ -5,9 +5,26 @@ import { getDivision, isDivisionId } from '@/lib/upload-lists';
 import type { GenerateEvent, ExtractedFile, ProjectInfo } from '@/lib/types';
 
 export const runtime = 'nodejs';
-// Vercel Hobby caps this at 60s; Pro allows 300. Either way the client sees
-// progress the whole time because the response streams.
+
+/**
+ * 300s is Vercel Hobby's default AND its hard maximum — it cannot be raised on
+ * that plan, and setting a higher value fails the deployment. On Pro, raise this
+ * to 800 (and set ANTHROPIC_EFFORT=high, which does not fit inside 300s).
+ */
 export const maxDuration = 300;
+const FUNCTION_LIMIT_SECONDS = 300;
+
+const ON_SERVERLESS = Boolean(
+  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME,
+);
+
+/**
+ * Above this much spec text, a hosted run is likely to hit the ceiling.
+ * Derived from a measured 184,860-character Division 23 job that finished at
+ * 286.6s of the 300s budget — so ~170k is the point where the margin stops being
+ * meaningful. Local runs have no limit and are never warned.
+ */
+const TIMEOUT_RISK_CHARS = 170_000;
 
 interface GenerateBody {
   division?: unknown;
@@ -97,6 +114,21 @@ export async function POST(request: Request) {
           }));
 
         const totalChars = specs.reduce((sum, s) => sum + s.text.length, 0);
+
+        // Serverless has a wall-clock ceiling the model call does not know about.
+        // Measured on Vercel Hobby (300s max): a 184,860-character Division 23 job
+        // finished at 286.6s — 13 seconds of margin. Rather than let someone wait
+        // five minutes to find out, say so before starting.
+        if (ON_SERVERLESS && totalChars > TIMEOUT_RISK_CHARS) {
+          const warning =
+            `At ${totalChars.toLocaleString()} characters this job is close to the ` +
+            `${FUNCTION_LIMIT_SECONDS}-second limit of the hosted version — a comparable ` +
+            'run finished with only seconds to spare. If it stops without producing a ' +
+            'sheet, that is the time limit, not your specs: split the upload into two ' +
+            'batches, or run the tool locally where there is no limit.';
+          warnings.push(warning);
+          send({ type: 'warning', message: warning });
+        }
         if (totalChars > LARGE_INPUT_THRESHOLD) {
           const warning =
             `These specs total ${totalChars.toLocaleString()} characters, past the ` +
