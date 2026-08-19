@@ -44,7 +44,7 @@ export default function ProjectForm({
 }) {
   return (
     <section>
-      <h2 className="section-title mb-3">2 · Project info</h2>
+      <h2 className="section-title mb-3">1 · Project info</h2>
 
       <div className="card p-5">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

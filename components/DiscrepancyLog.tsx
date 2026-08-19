@@ -19,8 +19,23 @@ export function severityCounts(items: Discrepancy[]): Record<Severity, number> {
   );
 }
 
+const SEVERITY_RANK: Record<Severity, number> = { high: 0, medium: 1, low: 2 };
+
 export default function DiscrepancyLog({ items }: { items: Discrepancy[] }) {
   const [open, setOpen] = useState(false);
+
+  // The model is told to emit these highest-severity-first, but sorting here as
+  // well means a log that came back in another order still reads correctly on
+  // screen — and an older saved job renders the same way as a new one.
+  // The printed checklist carries high and medium only; this is where the low
+  // tail is "available in full on request", so the count is worth stating.
+  const lowCount = items.filter((d) => d.severity === 'low').length;
+
+  const sorted = [...items].sort(
+    (a, b) =>
+      SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
+      (a.location ?? '').localeCompare(b.location ?? ''),
+  );
 
   if (items.length === 0) {
     return (
@@ -41,7 +56,8 @@ export default function DiscrepancyLog({ items }: { items: Discrepancy[] }) {
         <span>
           Discrepancy log
           <span className="ml-2 font-normal text-bch-muted">
-            ({items.length} {items.length === 1 ? 'entry' : 'entries'})
+            ({items.length} {items.length === 1 ? 'entry' : 'entries'}
+            {lowCount > 0 && `, incl. ${lowCount} low not printed on the PDF`})
           </span>
         </span>
         <span aria-hidden="true" className="text-bch-muted">
@@ -51,7 +67,7 @@ export default function DiscrepancyLog({ items }: { items: Discrepancy[] }) {
 
       {open && (
         <ul className="mt-3 space-y-3">
-          {items.map((d) => (
+          {sorted.map((d) => (
             <li key={d.id} className="rounded-md border border-bch-line p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-mono text-xs font-bold text-bch-navy">{d.id}</span>
@@ -68,10 +84,13 @@ export default function DiscrepancyLog({ items }: { items: Discrepancy[] }) {
                 )}
               </div>
 
-              {d.issue && <p className="mt-2 text-sm leading-relaxed">{d.issue}</p>}
+              {d.affects && (
+                <p className="mt-2 text-sm font-semibold text-bch-ink">{d.affects}</p>
+              )}
+              {d.issue && <p className="mt-1 text-sm leading-relaxed">{d.issue}</p>}
               {d.resolution && (
                 <p className="mt-2 text-sm leading-relaxed text-bch-muted">
-                  <span className="font-semibold text-bch-ink">Resolved to: </span>
+                  <span className="font-semibold text-bch-ink">Sheet shows / do this: </span>
                   {d.resolution}
                 </p>
               )}

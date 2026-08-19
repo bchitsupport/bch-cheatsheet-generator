@@ -82,6 +82,21 @@ worth someone owning the hosting and the API account.
 
 ---
 
+## Rebuilding the zip
+
+After changing anything under `bch-cheat-sheet/`:
+
+```bash
+npm run build:skill
+```
+
+**Do not repackage it with PowerShell's `Compress-Archive`.** On Windows it writes
+`bch-cheat-sheet\SKILL.md` into the archive instead of `bch-cheat-sheet/SKILL.md`.
+The ZIP spec requires forward slashes, so Claude rejects the upload with *"Zip
+file contains path with invalid characters"* — and nothing catches it until
+someone tries to install it. `npm run build:skill` uses `tar` and then reads the
+archive's central directory back to prove the paths are right.
+
 ## Maintaining it
 
 The skill and the app were built from the same house template and have drifted

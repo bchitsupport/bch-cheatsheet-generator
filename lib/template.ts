@@ -201,7 +201,7 @@ export const TEMPLATE_PATTERNS = String.raw`
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>{{DIVISION_TITLE}} Field Cheat Sheet &mdash; {{PROJECT_SUB}}</title>
+<title>{{DIVISION_TITLE}} Cheat Sheet &mdash; {{PROJECT_SUB}}</title>
 <style>
 [THE FULL TEMPLATE CSS ABOVE, VERBATIM]
 </style>
@@ -232,7 +232,7 @@ export const TEMPLATE_PATTERNS = String.raw`
   <div class="brow2">
     <div>
       <div class="ptitle">PLUMBING</div>
-      <div class="psub">FIELD CHEAT SHEET &middot; DIVISION 22</div>
+      <div class="psub">CHEAT SHEET &middot; DIVISION 22</div>
     </div>
     <div class="meta">
       <div class="m1">{{PROJECT_NAME uppercase}}</div>
@@ -357,8 +357,8 @@ export const TEMPLATE_PATTERNS = String.raw`
 
 === FOOTER (last element inside .sheet) ===
 <div class="foot">
-  <div>{{PROJECT_SUB}} &middot; {{DIVISION_TITLE}} FIELD CHEAT SHEET &middot; {{DIVISION_SHORT}}</div>
-  <div>FIELD QUICK-REFERENCE &mdash; GOVERNED BY FULL SPECIFICATION &amp; CONTRACT DRAWINGS</div>
+  <div>{{PROJECT_SUB}} &middot; {{DIVISION_TITLE}} CHEAT SHEET &middot; {{DIVISION_SHORT}}</div>
+  <div>QUICK-REFERENCE &mdash; GOVERNED BY FULL SPECIFICATION &amp; CONTRACT DRAWINGS</div>
 </div>
 
 === BADGE / SPINE COLOR ASSIGNMENT ===
@@ -417,8 +417,13 @@ tbody tr:nth-child(even){ background:var(--cream); }
 
 ul{ list-style:none; margin:5px 0; }
 li{ padding-left:16px; position:relative; margin:3px 0; }
-li:before{ content:"\2610"; position:absolute; left:0; font-family:var(--mono); }
-ul.plain li:before{ content:"\2022"; left:5px; }
+/* Drawn, not typed. This was U+2610, which no served font subset covers — it
+   fell back to Segoe UI Symbol on Windows and to nothing on the serverless
+   Chromium build, where 13 checkboxes per checklist came out as tofu. */
+li:before{ content:""; position:absolute; left:0; top:0.25em;
+  width:0.78em; height:0.78em; box-sizing:border-box; border:0.75pt solid var(--ink); }
+ul.plain li:before{ content:"\2022"; left:5px; top:0;
+  width:auto; height:auto; border:0; font-family:var(--mono); }
 
 .box{ background:var(--cream2); border-left:3pt solid var(--muted); padding:8px 12px; margin-top:10px; break-inside:avoid; }
 .box.red{ background:var(--redbg); border-left-color:var(--red); }
@@ -441,35 +446,24 @@ export const CHECKLIST_PATTERNS = String.raw`
   </div>
   <div class="strip"><i style="background:#0e7a43"></i><i style="background:#1d6fb8"></i><i style="background:#33383b"></i><i style="background:#b45309"></i><i style="background:#d99a00"></i></div>
 
-  <h2>1 &middot; BUILD VERIFICATION</h2>
+  <h2>1 &middot; DISCREPANCY LOG</h2>
+  <p style="margin:4px 0 0;color:#6b7280">High and medium severity, highest first. Read the HIGH entries before pricing or building from the sheet.</p>
   <table>
-    <thead><tr><th style="width:34%">CHECK</th><th style="width:14%">RESULT</th><th>NOTES</th></tr></thead>
-    <tbody>
-      <tr><td>Spec sections received</td><td>8 of 8</td><td>List each section number and title.</td></tr>
-      <tr><td>Sections with no usable content</td><td>None</td><td>Name any section whose text failed to extract.</td></tr>
-      <tr><td>Every sheet value traceable to a paragraph</td><td>Pass</td><td>Note any value that is not.</td></tr>
-      <tr><td>Security markings stripped</td><td>Pass</td><td></td></tr>
-    </tbody>
-  </table>
-
-  <h2>2 &middot; DISCREPANCY LOG</h2>
-  <table>
-    <thead><tr><th style="width:7%">#</th><th style="width:11%">SEVERITY</th><th style="width:24%">WHERE</th><th>ISSUE &amp; RESOLUTION</th></tr></thead>
+    <thead><tr><th style="width:7%">#</th><th style="width:10%">SEVERITY</th><th style="width:20%">WHERE</th><th style="width:20%">AFFECTS</th><th>PROBLEM / SHEET SHOWS / DO THIS</th></tr></thead>
     <tbody>
       <tr>
         <td class="mono">D-01</td>
         <td><span class="sev sev-high">HIGH</span></td>
         <td class="mono">22 70 00 §3.3.I<br>vs NFPA 54 §7.3.1</td>
-        <td><b>Conflict.</b> Spec allows threaded joints outside at all pressures; NFPA 54 requires welded above 5 psi.
-        <b>Resolved to:</b> welded above 5 psi (more stringent governs). Flagged on sheet §10.</td>
+        <td>Outdoor gas piping above 5 psi</td>
+        <td><b>Problem —</b> The spec allows threaded joints outdoors at any pressure; NFPA 54 requires welded above 5 psi.<br>
+        <b>Sheet shows —</b> Welded above 5 psi, the more stringent of the two.<br>
+        <b>Do this —</b> Price welded joints for the outdoor run; confirm with the engineer if the threaded reading was intended.</td>
       </tr>
     </tbody>
   </table>
 
-  <h2>3 &middot; FIELD VERIFICATION ITEMS</h2>
-  <ul>
-    <li>Confirm insulation thicknesses against contract drawings — spec values are minimums.</li>
-  </ul>
+  <p style="margin:8px 0 0;color:#6b7280">38 low-severity items were logged: loose wording, superseded standard references, and cross-references to sections that were not issued. None changes what is bought or built. The full list is held with this job in the generator.</p>
 
   <div class="box red">
     <h3>GAPS — NO VALUE FOUND IN THE SPECS</h3>
@@ -478,7 +472,7 @@ export const CHECKLIST_PATTERNS = String.raw`
 
   <div class="foot">
     <div>{{PROJECT_SUB}} &middot; {{DIVISION_TITLE}}</div>
-    <div>COMPANION TO THE FIELD CHEAT SHEET &mdash; NOT A CONTRACT DOCUMENT</div>
+    <div>COMPANION TO THE CHEAT SHEET &mdash; NOT A CONTRACT DOCUMENT</div>
   </div>
 </body>
 </html>
@@ -491,15 +485,31 @@ export const CHECKLIST_PATTERNS = String.raw`
  * Arimo == Liberation Sans == Arial metrics; Archivo Narrow for the condensed
  * face; Roboto Mono for the monospace face.
  */
+/**
+ * Google Fonts splits each family into unicode-range subsets and serves none
+ * covering arrows (U+2190-21FF), math operators (U+2200-22FF) or geometric and
+ * misc symbols (U+25A0-27BF). Spec text is full of `>=`, `<=` and arrows, and the
+ * checklist drew its checkbox from U+2610 — so those characters silently fell out
+ * of Arimo into whatever the host had: Arial and Segoe UI Symbol on Windows,
+ * nothing at all on the serverless Chromium build, where they render as tofu.
+ *
+ * Noto Sans Math and Noto Sans Symbols 2 are declared after each family so the
+ * fallback is itself a webfont — the same glyphs on every host — rather than a
+ * system font that differs between a laptop and Vercel.
+ *
+ * `npm run check:fonts` fails the build if any character still lands on a system
+ * face.
+ */
 export const FONT_PATCH = `
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;700&family=Arimo:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;700&family=Arimo:wght@400;700&family=Roboto+Mono:wght@400;700&family=Noto+Sans+Math&family=Noto+Sans+Symbols+2&display=swap" rel="stylesheet">
 <style>
 :root{
-  --cond:"Archivo Narrow","Liberation Sans Narrow","Arial Narrow",Arial,sans-serif;
-  --mono:"Roboto Mono","DejaVu Sans Mono",Consolas,"Courier New",monospace;
-  --sans:"Arimo","Liberation Sans",Arial,Helvetica,sans-serif;
+  --sym:"Noto Sans Math","Noto Sans Symbols 2";
+  --cond:"Archivo Narrow",var(--sym),"Liberation Sans Narrow","Arial Narrow",Arial,sans-serif;
+  --mono:"Roboto Mono",var(--sym),"DejaVu Sans Mono",Consolas,"Courier New",monospace;
+  --sans:"Arimo",var(--sym),"Liberation Sans",Arial,Helvetica,sans-serif;
 }
 </style>
 `.trim();

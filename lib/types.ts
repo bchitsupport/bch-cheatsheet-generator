@@ -52,6 +52,8 @@ export interface Discrepancy {
   kind: string;
   /** Where it lives — spec paragraph references. */
   location: string;
+  /** The work in question, in a few words — what a reader scans to decide relevance. */
+  affects?: string;
   issue: string;
   resolution: string;
 }
@@ -89,6 +91,102 @@ export type GenerateEvent =
    */
   | { type: 'heartbeat'; elapsedMs: number }
   | { type: 'done'; result: GenerationResult }
+  | { type: 'error'; message: string };
+
+// ─────────────────────────────────────────── the split/identify/build pipeline
+
+export type SectionRole = 'primary' | 'supporting' | 'none';
+
+/** One spec section as the review screen shows it. */
+export interface RoutedSectionView {
+  sectionNumber: string;
+  title: string | null;
+  summary: string;
+  charCount: number;
+  roles: Record<DivisionId, SectionRole>;
+  targets: Partial<Record<DivisionId, string[]>>;
+  startPage: number | null;
+  endPage: number | null;
+  pageCount: number | null;
+  splitWarnings: string[];
+  /** False for a related section outside Divisions 22/23 — pointed at, not read. */
+  willRead: boolean;
+  /** True when this section will be named on the checklist as related-but-unread. */
+  willRefer: boolean;
+  /** What reading it anyway would add, in dollars. Zero when already read. */
+  addCost: number;
+}
+
+export interface TradePresenceView {
+  id: DivisionId;
+  name: string;
+  primaryCount: number;
+  supportingCount: number;
+  present: boolean;
+  note: string;
+}
+
+export interface CostEstimateView {
+  readPages: number;
+  sheetCount: number;
+  dollars: number;
+  low: number;
+  high: number;
+  model: string;
+}
+
+export interface ManifestView {
+  sections: RoutedSectionView[];
+  trades: TradePresenceView[];
+  pageCount: number;
+  method: 'running-header' | 'section-lines' | 'none';
+  furnitureRemoved: number;
+  /** Pages that will actually be read, as against the upload's total. */
+  readPages: number;
+  estimate: CostEstimateView;
+  warnings: string[];
+}
+
+export interface BuiltSheet {
+  trade: DivisionId;
+  name: string;
+  cheatsheetPdf: string; // base64
+  checklistPdf: string; // base64
+  pageCount: number;
+  blockCount: number;
+  discrepancies: Discrepancy[];
+  recoveredChecklist: boolean;
+}
+
+export const BUILD_STEPS = [
+  { key: 'split', label: 'Splitting the book into sections' },
+  { key: 'identify', label: 'Working out what each section is' },
+  { key: 'read', label: 'Reading every section' },
+  { key: 'compose', label: 'Writing the sheets' },
+] as const;
+
+export type BuildStepKey = (typeof BUILD_STEPS)[number]['key'];
+
+/** NDJSON frames streamed from POST /api/build. */
+export type BuildEvent =
+  | { type: 'step'; step: BuildStepKey; trade?: DivisionId; total?: number }
+  | { type: 'manifest' } & Partial<ManifestView>
+  | { type: 'awaiting-selection' }
+  | { type: 'progress'; done: number; total: number; sectionNumber: string }
+  | {
+      type: 'usage';
+      phase: 'read';
+      model: string;
+      sections: number;
+      inputTokens: number;
+      outputTokens: number;
+      cacheReadTokens: number;
+      dollars: number;
+    }
+  | { type: 'warning'; message: string }
+  | { type: 'heartbeat'; elapsedMs: number }
+  | ({ type: 'sheet' } & BuiltSheet)
+  | { type: 'done'; elapsedMs: number }
   | { type: 'error'; message: string };
 
 export interface PastJob {

@@ -51,6 +51,21 @@ export async function extractPdfText(buffer: Buffer): Promise<PdfText> {
 }
 
 /**
+ * Per-page text, kept separate.
+ *
+ * The splitter needs pages as distinct units: a combined division book stamps
+ * every page with the section it belongs to, so attribution is per page rather
+ * than something inferred from where boundaries fall.
+ */
+export async function extractPdfPages(
+  buffer: Buffer,
+): Promise<{ pages: string[]; pageCount: number }> {
+  const pages: string[] = [];
+  const result = await pdfParse(buffer, { pagerender: makePageCollector(pages) });
+  return { pages: pages.map(normalize), pageCount: result.numpages };
+}
+
+/**
  * Page count of a PDF we produced — used for the results summary.
  *
  * pdf-parse bundles pdf.js 1.10 (2018), which rejects some perfectly valid

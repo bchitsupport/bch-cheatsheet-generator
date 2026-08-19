@@ -50,7 +50,7 @@ body {
   }
 }
 
-/* The spinner in ProgressSteps. */
+/* The spinner shown while a build is running. */
 @keyframes bch-spin {
   to {
     transform: rotate(360deg);

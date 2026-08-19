@@ -1,267 +1,339 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
-import DivisionSelector from '@/components/DivisionSelector';
-import GenerateButton, { type ReadinessIssue } from '@/components/GenerateButton';
-import ProgressSteps from '@/components/ProgressSteps';
+import { useCallback, useRef, useState } from 'react';
+import BuildResults from '@/components/BuildResults';
+import ManifestReview from '@/components/ManifestReview';
 import ProjectForm from '@/components/ProjectForm';
-import ResultsPanel from '@/components/ResultsPanel';
-import UploadZone from '@/components/UploadZone';
+import SpecUpload from '@/components/SpecUpload';
 import { savePastJob } from '@/lib/past-jobs';
-import { buildSectionMatches } from '@/lib/section-matcher';
 import {
   EMPTY_PROJECT,
-  type ExtractedFile,
-  type GenerateEvent,
-  type GenerationResult,
-  type ProgressStepKey,
+  type BuildEvent,
+  type BuildStepKey,
+  type BuiltSheet,
+  type ManifestView,
   type ProjectInfo,
 } from '@/lib/types';
-import { getDivision, type DivisionId } from '@/lib/upload-lists';
+import type { DivisionId } from '@/lib/upload-lists';
+
+type Stage = 'upload' | 'review' | 'building' | 'done';
+
+const STEP_LABEL: Record<BuildStepKey, string> = {
+  split: 'Splitting the book into sections',
+  identify: 'Working out what each section is',
+  read: 'Reading every section',
+  compose: 'Writing the sheets',
+};
 
 export default function NewSheetPage() {
-  const [divisionId, setDivisionId] = useState<DivisionId | null>(null);
   const [project, setProject] = useState<ProjectInfo>(EMPTY_PROJECT);
-  const [files, setFiles] = useState<ExtractedFile[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
 
-  const [running, setRunning] = useState(false);
-  const [step, setStep] = useState<ProgressStepKey | null>(null);
+  const [stage, setStage] = useState<Stage>('upload');
+  const [manifest, setManifest] = useState<ManifestView | null>(null);
+  const [selected, setSelected] = useState<DivisionId[]>([]);
+  const [alsoRead, setAlsoRead] = useState<string[]>([]);
+  const [sheets, setSheets] = useState<BuiltSheet[]>([]);
+
+  const [step, setStep] = useState<BuildStepKey | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<GenerationResult | null>(null);
-  const [storageNote, setStorageNote] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const [spent, setSpent] = useState<number | null>(null);
 
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  const division = divisionId ? getDivision(divisionId) : null;
-
-  const issues = useMemo<ReadinessIssue[]>(() => {
-    if (!division) return [{ message: 'Select a division.' }];
-
-    const list: ReadinessIssue[] = [];
-
-    if (!project.projectName.trim()) list.push({ message: 'Enter a project name.' });
-    if (!project.preparerName.trim()) list.push({ message: 'Enter a preparer name.' });
-
-    const missing = buildSectionMatches(files, division).filter(
-      (m) => m.status === 'missing',
-    );
-    if (missing.length > 0) {
-      list.push({
-        message: `Upload the remaining ${missing.length} required section${
-          missing.length === 1 ? '' : 's'
-        }: ${missing.map((m) => m.number).join(', ')}.`,
-      });
-    }
-
-    return list;
-  }, [division, files, project.preparerName, project.projectName]);
-
-  const selectDivision = useCallback(
-    (id: DivisionId) => {
-      if (id === divisionId) return;
-      // Section matching is division-specific, so previously matched files would
-      // be wrong against a different list. Start clean.
-      setDivisionId(id);
-      setFiles([]);
-      setResult(null);
+  /**
+   * One request handler for both stages. Called with no trades it stops after
+   * the manifest; called with trades it goes on to build. The route decides —
+   * this just reads the frames.
+   */
+  const run = useCallback(
+    async (trades: DivisionId[]) => {
       setError(null);
       setWarnings([]);
       setStep(null);
-      setStorageNote(null);
-    },
-    [divisionId],
-  );
+      setProgress(null);
+      setElapsed(0);
+      setSpent(null);
+      if (trades.length > 0) setSheets([]);
 
-  const generate = useCallback(async () => {
-    if (!division) return;
-
-    setRunning(true);
-    setError(null);
-    setResult(null);
-    setWarnings([]);
-    setStorageNote(null);
-    setStep('extract');
-
-    const startedAt = Date.now();
-    setElapsed(0);
-
-    try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ division: division.id, project, files }),
-      });
-
-      if (!res.body) {
-        throw new Error(
-          res.status === 504
-            ? 'The server timed out before sending anything. The generation exceeded the hosting time limit — split the specs into two batches, or raise the plan limit.'
-            : `Request failed (${res.status}).`,
-        );
+      const body = new FormData();
+      for (const f of files) body.append('files', f);
+      for (const t of trades) body.append('trades', t);
+      for (const n of alsoRead) body.append('alsoRead', n);
+      if (trades.length > 0) {
+        body.set('projectName', project.projectName);
+        body.set('projectSub', project.projectSub);
+        body.set('preparerName', project.preparerName);
+        body.set('preparerTitle', project.preparerTitle);
+        body.set('preparerEmail', project.preparerEmail);
+        body.set('legendDrawing', project.legendDrawing);
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+      const startedAt = Date.now();
+      const built: BuiltSheet[] = [];
       let finished = false;
 
-      const handle = (event: GenerateEvent) => {
-        switch (event.type) {
-          case 'step':
-            setStep(event.step);
-            break;
-          case 'warning':
-            setWarnings((prev) => [...prev, event.message]);
-            break;
-          case 'heartbeat':
-            // Proof of life during the multi-minute model call.
-            setElapsed(Math.round(event.elapsedMs / 1000));
-            break;
-          case 'done': {
-            finished = true;
-            setResult(event.result);
-            setStep(null);
+      try {
+        const res = await fetch('/api/build', { method: 'POST', body });
+        if (!res.body) throw new Error(`Request failed (${res.status}).`);
 
-            const saved = savePastJob({
-              id: `${Date.now()}`,
-              projectName: project.projectName,
-              projectSub: project.projectSub,
-              division: division.id,
-              divisionName: division.name,
-              date: new Date().toISOString(),
-              pageCount: event.result.pageCount,
-              discrepancyCount: event.result.discrepancies.length,
-              cheatsheetPdf: event.result.cheatsheetPdf,
-              checklistPdf: event.result.checklistPdf,
-            });
-            if (!saved.saved && saved.message) setStorageNote(saved.message);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-            setTimeout(
-              () => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }),
-              50,
-            );
-            break;
+        const handle = (event: BuildEvent) => {
+          switch (event.type) {
+            case 'step':
+              setStep(event.step);
+              if (event.total) setProgress({ done: 0, total: event.total });
+              break;
+            case 'progress':
+              setProgress({ done: event.done, total: event.total });
+              break;
+            case 'manifest': {
+              const m = event as unknown as ManifestView;
+              setManifest(m);
+              // Default to whatever the book actually contains.
+              setSelected(m.trades.filter((t) => t.present).map((t) => t.id));
+              break;
+            }
+            case 'awaiting-selection':
+              finished = true;
+              setStage('review');
+              break;
+            case 'warning':
+              setWarnings((prev) => [...prev, event.message]);
+              break;
+            case 'usage':
+              // What the reading phase actually cost, against the estimate shown
+              // before the run. With no spend cap this is the only feedback loop.
+              setSpent(event.dollars);
+              break;
+            case 'heartbeat':
+              setElapsed(Math.round(event.elapsedMs / 1000));
+              break;
+            case 'sheet': {
+              const { type: _t, ...sheet } = event;
+              built.push(sheet as BuiltSheet);
+              setSheets([...built]);
+              savePastJob({
+                id: `${Date.now()}-${sheet.trade}`,
+                projectName: project.projectName,
+                projectSub: project.projectSub,
+                division: sheet.trade,
+                divisionName: sheet.name,
+                date: new Date().toISOString(),
+                pageCount: sheet.pageCount,
+                discrepancyCount: sheet.discrepancies.length,
+                cheatsheetPdf: sheet.cheatsheetPdf,
+                checklistPdf: sheet.checklistPdf,
+              });
+              break;
+            }
+            case 'done':
+              finished = true;
+              setStage('done');
+              setStep(null);
+              setTimeout(
+                () => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }),
+                50,
+              );
+              break;
+            case 'error':
+              finished = true;
+              setError(event.message);
+              break;
           }
-          case 'error':
-            finished = true;
-            setError(event.message);
-            break;
+        };
+
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              handle(JSON.parse(line) as BuildEvent);
+            } catch {
+              /* partial frame — the next chunk completes it */
+            }
+          }
         }
-      };
-
-      // NDJSON: one JSON object per line.
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
+        if (buffer.trim()) {
           try {
-            handle(JSON.parse(line) as GenerateEvent);
+            handle(JSON.parse(buffer) as BuildEvent);
           } catch {
-            /* partial frame — the next chunk completes it */
+            /* trailing noise */
           }
         }
-      }
 
-      if (buffer.trim()) {
-        try {
-          handle(JSON.parse(buffer) as GenerateEvent);
-        } catch {
-          /* ignore trailing noise */
+        if (!finished) {
+          // The route reports its own failures, so an unannounced end means the
+          // server process itself died — almost always a hosting time limit.
+          const secs = Math.round((Date.now() - startedAt) / 1000);
+          setError(
+            `The server stopped responding after ${secs} seconds without reporting an ` +
+              'error. That usually means the run exceeded the hosting time limit rather ' +
+              'than anything being wrong with your specs.',
+          );
         }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'The run failed.');
       }
+    },
+    [files, project, alsoRead],
+  );
 
-      if (!finished) {
-        // The stream ended without a done/error frame. The route reports its own
-        // failures, so reaching here means the server process itself was killed —
-        // almost always the hosting platform's function time limit (Vercel: 300s),
-        // occasionally memory. Say so, because "connection closed" on its own
-        // sends people looking at their network.
-        const secs = Math.round((Date.now() - startedAt) / 1000);
-        setError(
-          `The server stopped responding after ${secs} seconds, without reporting an error. ` +
-            'That usually means the generation exceeded the hosting time limit rather than ' +
-            'anything being wrong with your specs. Try again with fewer spec sections, or ' +
-            'split the upload into two batches. If it keeps happening at roughly the same ' +
-            'time, the job needs to run in the background instead.',
-        );
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Generation failed.');
-    } finally {
-      setRunning(false);
-    }
-  }, [division, files, project]);
+  const scan = useCallback(async () => {
+    setStage('building');
+    setManifest(null);
+    setSheets([]);
+    await run([]);
+    setStage((s) => (s === 'building' ? 'upload' : s));
+  }, [run]);
+
+  const build = useCallback(async () => {
+    setStage('building');
+    await run(selected);
+    setStage((s) => (s === 'building' ? 'review' : s));
+  }, [run, selected]);
+
+  const busy = stage === 'building';
+  const canScan = files.length > 0 && !busy;
+  const missingProject =
+    !project.projectName.trim() || !project.preparerName.trim();
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-6 py-8">
       <header>
         <h1 className="text-2xl font-bold tracking-tight text-bch-navy">New Sheet</h1>
         <p className="mt-1 text-sm text-bch-muted">
-          Upload the spec sections for one division and get back a field cheat sheet
-          plus a verification checklist.
+          Upload a division — whole or in pieces. The tool works out which sections are
+          in it, which trades it covers, and builds a cheat sheet and checklist for each.
         </p>
       </header>
 
-      <DivisionSelector value={divisionId} onChange={selectDivision} />
+      <ProjectForm value={project} onChange={setProject} />
 
-      {division && (
-        <>
-          <ProjectForm value={project} onChange={setProject} />
+      <SpecUpload files={files} onChange={setFiles} disabled={busy} />
 
-          <UploadZone
-            division={division}
-            files={files}
-            onFilesChange={setFiles}
-            disabled={running}
-          />
+      {stage === 'upload' && (
+        <div className="flex flex-wrap items-center gap-4">
+          <button type="button" onClick={scan} disabled={!canScan} className="btn-primary">
+            Scan the specifications
+          </button>
+          <span className="text-xs text-bch-muted">
+            Reads what&rsquo;s in the upload and shows you before anything is generated.
+          </span>
+        </div>
+      )}
 
-          <GenerateButton issues={issues} running={running} onGenerate={generate} />
+      {busy && (
+        <section className="card p-5">
+          <div className="flex items-center gap-3">
+            <span className="bch-spin inline-block h-4 w-4 rounded-full border-2 border-bch-line border-t-bch-accent" />
+            <span className="text-sm font-semibold text-bch-ink">
+              {step ? STEP_LABEL[step] : 'Starting'}
+            </span>
+            {elapsed > 0 && (
+              <span className="ml-auto text-xs tabular-nums text-bch-muted">
+                {Math.floor(elapsed / 60)}m {String(elapsed % 60).padStart(2, '0')}s
+              </span>
+            )}
+          </div>
 
-          {(running || warnings.length > 0 || error) && (
-            <ProgressSteps
-              current={step}
-              done={Boolean(result)}
-              failed={Boolean(error)}
-              warnings={warnings}
-              elapsed={elapsed}
-            />
-          )}
-
-          {error && (
-            <div className="card border-red-200 bg-red-50 p-5">
-              <h2 className="text-sm font-bold text-red-800">Generation failed</h2>
-              <p className="mt-1 text-sm text-red-700">{error}</p>
-              <button
-                type="button"
-                onClick={generate}
-                disabled={running || issues.length > 0}
-                className="btn-primary mt-4"
-              >
-                Retry
-              </button>
+          {progress && progress.total > 0 && (
+            <div className="mt-3">
+              <div className="h-1.5 w-full overflow-hidden rounded bg-bch-line">
+                <div
+                  className="h-full bg-bch-accent transition-all"
+                  style={{ width: `${(progress.done / progress.total) * 100}%` }}
+                />
+              </div>
+              <p className="mt-1 text-xs text-bch-muted">
+                {progress.done} of {progress.total} sections
+              </p>
             </div>
           )}
 
-          <div ref={resultsRef}>
-            {result && (
-              <ResultsPanel
-                result={result}
-                division={division}
-                project={project}
-                storageNote={storageNote}
-              />
-            )}
-          </div>
-        </>
+          <p className="mt-3 text-xs text-bch-muted">
+            A full division takes 15–25 minutes. Leave this tab open.
+          </p>
+
+          {spent !== null && (
+            <p className="mt-2 text-xs text-bch-muted">
+              Reading the specifications cost{' '}
+              <span className="font-semibold tabular-nums text-bch-ink">
+                ${spent.toFixed(2)}
+              </span>
+              . Writing the sheets adds roughly $2 each.
+            </p>
+          )}
+
+          {sheets.length > 0 && (
+            <p className="mt-2 text-xs text-bch-ink">
+              Finished: {sheets.map((s) => s.name).join(', ')}
+            </p>
+          )}
+        </section>
       )}
+
+      {warnings.map((w) => (
+        <p
+          key={w}
+          className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+        >
+          {w}
+        </p>
+      ))}
+
+      {error && (
+        <div className="card border-red-200 bg-red-50 p-5">
+          <h2 className="text-sm font-bold text-red-800">That didn&rsquo;t work</h2>
+          <p className="mt-1 text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
+      {manifest && (stage === 'review' || stage === 'done' || busy) && (
+        <ManifestReview
+          manifest={manifest}
+          selected={selected}
+          onSelectedChange={setSelected}
+          alsoRead={alsoRead}
+          onAlsoReadChange={setAlsoRead}
+          disabled={busy}
+        />
+      )}
+
+      {manifest && stage === 'review' && (
+        <div className="flex flex-wrap items-center gap-4">
+          <button
+            type="button"
+            onClick={build}
+            disabled={busy || selected.length === 0 || missingProject}
+            className="btn-primary"
+          >
+            Build {selected.length} sheet{selected.length === 1 ? '' : 's'}
+          </button>
+          {missingProject && (
+            <span className="text-xs text-amber-700">
+              Enter a project name and preparer name first.
+            </span>
+          )}
+          {selected.length === 0 && !missingProject && (
+            <span className="text-xs text-bch-muted">Choose at least one sheet.</span>
+          )}
+        </div>
+      )}
+
+      <div ref={resultsRef}>
+        <BuildResults sheets={sheets} project={project} />
+      </div>
     </div>
   );
 }

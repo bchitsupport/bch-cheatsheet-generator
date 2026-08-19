@@ -30,3 +30,7 @@ probe-*.mjs
 
 # built skill package - regenerate with Compress-Archive
 skill/bch-cheat-sheet.zip
+
+# Spec books staged for browser testing. Client documents must never be served
+# from public/ or committed.
+/public/uitest/

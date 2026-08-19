@@ -88,30 +88,50 @@ export async function POST(request: Request) {
           send({ type: 'warning', message: warning });
         }
 
-        const usable = all.filter((f) => !f.error && f.text?.trim() && f.matchedSection);
+        const readable = all.filter((f) => !f.error && f.text?.trim());
+        const primary = readable.filter((f) => f.matchedSection);
+        // A section outside the division's list is still part of the division and
+        // can govern this trade's work — a shared hanger schedule, a
+        // division-wide test pressure. Previously these were dropped, so a
+        // requirement that lived in a neighbouring section never reached the
+        // sheet. They now go in as supporting context instead.
+        const supporting = readable.filter((f) => !f.matchedSection);
 
-        for (const f of all.filter((f) => !f.error && f.text?.trim() && !f.matchedSection)) {
-          const warning = `Not needed for this division — skipped ${f.fileName}${
-            f.sectionNumber ? ` (${f.sectionNumber})` : ''
-          }.`;
-          warnings.push(warning);
-          send({ type: 'warning', message: warning });
-        }
-
-        if (usable.length === 0) {
+        if (primary.length === 0) {
           throw new Error(
             'None of the uploaded files matched a required section for this division.',
           );
         }
 
-        const specs: SpecInput[] = usable
-          .slice()
-          .sort((a, b) => (a.matchedSection ?? '').localeCompare(b.matchedSection ?? ''))
-          .map((f) => ({
+        if (supporting.length > 0) {
+          const notice =
+            `Reading ${supporting.length} extra section${supporting.length === 1 ? '' : 's'} ` +
+            'as supporting context — they are not part of this division\'s outline, but any ' +
+            'requirement in them that governs this trade will be carried onto the sheet and ' +
+            'any conflict logged.';
+          warnings.push(notice);
+          send({ type: 'warning', message: notice });
+        }
+
+        const bySection = (a: ExtractedFile, b: ExtractedFile) =>
+          (a.matchedSection ?? a.sectionNumber ?? '').localeCompare(
+            b.matchedSection ?? b.sectionNumber ?? '',
+          );
+
+        const specs: SpecInput[] = [
+          ...primary.slice().sort(bySection).map((f) => ({
             fileName: f.fileName,
             sectionNumber: f.matchedSection!,
             text: f.text,
-          }));
+            role: 'primary' as const,
+          })),
+          ...supporting.slice().sort(bySection).map((f) => ({
+            fileName: f.fileName,
+            sectionNumber: f.sectionNumber ?? f.fileName,
+            text: f.text,
+            role: 'supporting' as const,
+          })),
+        ];
 
         const totalChars = specs.reduce((sum, s) => sum + s.text.length, 0);
 

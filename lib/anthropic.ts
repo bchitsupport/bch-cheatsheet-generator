@@ -5,6 +5,7 @@ import {
   TEMPLATE_CSS,
   TEMPLATE_PATTERNS,
 } from './template';
+import type { ReferredSection } from './section-router';
 import type { Discrepancy, ProjectInfo, Severity } from './types';
 import type { Division } from './upload-lists';
 
@@ -69,6 +70,34 @@ const MAX_TOKENS = 128_000;
 /** Past this, coverage of the later sections starts to thin out. */
 export const LARGE_INPUT_THRESHOLD = 150_000;
 
+/**
+ * Sorting sections is classification over short excerpts, not the deep read the
+ * sheet needs — Sonnet does it well and returns in seconds rather than minutes,
+ * which matters because a person is waiting on the review screen. Override with
+ * ANTHROPIC_ROUTER_MODEL if a book ever routes badly.
+ */
+export const ROUTER_MODEL = process.env.ANTHROPIC_ROUTER_MODEL ?? 'claude-sonnet-5';
+
+/**
+ * Phase 1 reads each spec section into a data block, and everything downstream
+ * is built from those blocks — a value missed here is missed for good, because
+ * the compose pass never sees the raw spec. So it gets the strongest model,
+ * not the cheap one used for sorting sections by title.
+ */
+export const BLOCK_MODEL = process.env.ANTHROPIC_BLOCK_MODEL ?? MODEL;
+
+/** Published rates, $ per million tokens, for reporting run cost. */
+export const RATES: Record<string, { input: number; output: number }> = {
+  'claude-opus-5': { input: 5, output: 25 },
+  'claude-sonnet-5': { input: 3, output: 15 },
+  'claude-haiku-4-5-20251001': { input: 1, output: 5 },
+};
+
+/** The shared client, for callers that issue their own smaller requests. */
+export function getRouterClient(): Anthropic {
+  return getClient();
+}
+
 let client: Anthropic | null = null;
 function getClient(): Anthropic {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -77,14 +106,60 @@ function getClient(): Anthropic {
         'or to the project Environment Variables in Vercel.',
     );
   }
-  client ??= new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  // A sheet is a single ten-minute call; losing one to a transient capacity blip
+  // costs the whole run, so retry harder than the SDK's default of 2.
+  client ??= new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 5 });
   return client;
+}
+
+/**
+ * Retry a whole streamed call on transient server-side failures.
+ *
+ * The SDK's own retries cover establishing the request. They do not cover a
+ * stream that opens and then dies — which is what `overloaded_error` does, and
+ * it killed two of three concurrent Division 22/23 runs outright. Backoff is
+ * generous because these calls are minutes long: there is no point retrying a
+ * ten-minute request against a busy pool one second later.
+ */
+export async function withRetry<T>(label: string, run: () => Promise<T>): Promise<T> {
+  const DELAYS_MS = [5_000, 15_000, 40_000, 90_000];
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= DELAYS_MS.length; attempt++) {
+    try {
+      return await run();
+    } catch (err) {
+      lastError = err;
+      const text = err instanceof Error ? err.message : String(err);
+      const transient =
+        /overloaded|rate_limit|429|500|502|503|529|ECONNRESET|ETIMEDOUT|socket hang up/i.test(
+          text,
+        );
+      if (!transient || attempt === DELAYS_MS.length) break;
+
+      const wait = DELAYS_MS[attempt];
+      console.warn(
+        `[${label}] attempt ${attempt + 1} failed (${text.slice(0, 120)}) — ` +
+          `retrying in ${wait / 1000}s`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
+  }
+
+  throw lastError;
 }
 
 export interface SpecInput {
   fileName: string;
   sectionNumber: string;
   text: string;
+  /**
+   * 'primary' is the trade's own scope and drives the sheet. 'supporting' is the
+   * rest of the division, included so a section that governs another trade's
+   * work — a shared hanger schedule, a division-wide test pressure — is not
+   * silently dropped. Defaults to primary when omitted.
+   */
+  role?: 'primary' | 'supporting';
 }
 
 export interface ModelOutput {
@@ -118,14 +193,22 @@ interface ParsedBlocks {
  * turn, after the cached prefix.
  */
 function buildSystemPrompt(): string {
-  return `You are building a BCH Mechanical field cheat sheet. You will receive extracted
+  return `You are building a BCH Mechanical cheat sheet. You will receive extracted
 text from construction specification sections. Your job is to produce two things:
+
+WHO READS THIS: estimators, first. They are pricing the job from these sheets, so
+what governs quantity, material and scope matters most — size breaks, material by
+system and location, what is included and what is somebody else's, named products
+and their acceptable equals, and anything that changes a unit rate. Project
+managers and installing crews read it too, so keep what governs how the work is
+built. Drop what only matters to neither.
 
 1. A complete HTML document for the cheat sheet, using the exact template and
    CSS provided below.
-2. A checklist in HTML format containing: build verification results, and a
-   discrepancy log of every conflict, gap, overlap, and ambiguity found in the
-   specs.
+2. A checklist in HTML format: the discrepancy log of every conflict, gap,
+   overlap and ambiguity found in the specs, followed by the GAPS block for
+   anything the sheet could not answer. Nothing else — no build-verification
+   table, no list of things to verify. The log is the document.
 
 RULES:
 - Include a value when someone would otherwise stop work and go look it up:
@@ -156,16 +239,108 @@ RULES:
   text — none of it belongs on the cheat sheet.
 - No revision labels anywhere on the sheet.
 
+SEVERITY — RANK BY CONSEQUENCE, NOT BY HOW WRONG THE SPEC IS:
+- HIGH   — the work cannot be priced or built correctly until this is answered.
+           Getting it wrong means buying the wrong material, failing an
+           inspection, or removing work already installed.
+- MEDIUM — work can proceed on the reading the sheet shows, but the answer
+           changes cost or method and has to be confirmed before it is locked
+           in: before a purchase order, a submittal, or fabrication.
+- LOW    — worth knowing, changes nothing that gets bought or built. Loose
+           wording, a superseded standard, a cross-reference to a section that
+           was not issued.
+
+- Rank on what happens if the reader acts on the sheet and the other reading was
+  the right one. A flat contradiction with no cost or code consequence is LOW.
+  An ambiguity that decides a pipe material is HIGH, however politely the spec
+  puts it.
+- Most entries are not HIGH. If more than about a fifth are, the ranking has
+  stopped telling anyone anything and everything gets read or nothing does.
+- Never raise severity to draw attention to good analysis. The reader is
+  triaging a long list with limited time; an inflated HIGH costs them the time
+  they should have spent on a real one.
+
+ORDER OF THE LOG:
+- Sort by severity first: every HIGH, then every MEDIUM, then every LOW.
+- Within a severity band, sort by spec section number ascending, so a reader
+  working through one section finds its entries together.
+- Number them D-01, D-02, D-03... in that final display order, with no gaps. The
+  sheet cites these numbers, so they must match what someone finds when they
+  look the number up.
+- Do not order by the sequence the sections were supplied in. Measured on a real
+  75-entry log ordered that way, high-severity entries landed at positions 18
+  and 22, behind low-severity ones — nobody triaging that list finds them.
+
+THE LOW-SEVERITY TAIL:
+- Write HIGH and MEDIUM entries out in full, in the table, in the shape below.
+- Do NOT write LOW entries into the table. One real log ran to 91 entries of
+  which 51 were LOW — half a document describing things that, by the definition
+  above, change nothing that gets bought or built. It buries the seven that do.
+- Instead, close the table with one short paragraph: how many LOW items there
+  were and what kinds — for example "38 low-severity items were logged: loose
+  wording, superseded standard references, and cross-references to sections that
+  were not issued. None changes what is bought or built. The full list is held
+  with this job in the generator."
+- Still emit EVERY discrepancy, LOW included, in the DISCREPANCIES JSON. The
+  JSON is the complete record and is what the website shows on screen; the
+  printed log is the triage view. Nothing is being discarded, only unprinted.
+- If there are no LOW items, omit the paragraph rather than say "0 items".
+
+WRITING A DISCREPANCY:
+A log can run to seventy entries, and a reader skims it deciding which ones touch
+them today. Every entry therefore takes the same shape, in the same order, so
+they can be skimmed rather than read.
+
+- AFFECTS column: the work in question, in a few words — "Chilled water pipe,
+  1-1/4" through 2"", "Outdoor gas piping above 5 psi". Never the spec's
+  structure. This is what tells a reader in one glance whether to keep reading.
+- Then three labelled lines, always these three, always in this order:
+    Problem —     what is wrong, in one or two plain sentences.
+    Sheet shows — the reading the sheet was built on.
+    Do this —     the action, as an instruction to a person.
+- Write "Do this" as a command with an actor: "Price welded joints for the
+  outdoor run", "Confirm the size break with the engineer before releasing
+  take-off". Never "must not be released until confirmed", which hides who acts.
+- Describe what the requirement IS, not how the specification is arranged.
+  "The spec sets the size break twice and the two disagree" — not "§2.1.B.1
+  states one range and §2.1.B.2 the next". The paragraph numbers live in the
+  WHERE column, which is where a reader checks the claim against the book.
+- Do not explain that a second clause "mirrors" or "repeats" the same conflict.
+  Say the conflict once and name every size or system it touches.
+- Keep an entry under about sixty words. Cutting words is not cutting
+  information: a value, a size, a limit or a citation must never be dropped to
+  make an entry shorter.
+
+SUPPORTING SECTIONS:
+Spec text arrives in two groups. PRIMARY sections are the trade's own scope and
+drive the sheet. SUPPORTING sections are the rest of the division, supplied so
+nothing is missed when one section governs another's work — a hanger schedule
+that covers both duct and pipe, a vibration section that applies to equipment on
+either side, a general-requirements section that sets test pressures for the
+whole division.
+- Read every supporting section. Where one changes, restricts, or overrides
+  something in a primary section, put the governing requirement on the sheet and
+  cite the supporting section as its source.
+- Where a primary section defers to a supporting one ("as specified in Section
+  23 05 29"), resolve it: state the actual requirement, not the pointer.
+- A conflict between a primary and a supporting section is a discrepancy and
+  goes in the log like any other, with both section numbers in WHERE.
+- Do not widen the sheet's scope to cover supporting sections for their own
+  sake. They earn space only where they govern the primary trade's work. A
+  supporting section that never touches this trade produces nothing.
+
 SHEET SHAPE — LENGTH IS A HARD REQUIREMENT, NOT A PREFERENCE:
-- The approved reference sheet is 4 letter pages carrying about 11,000
-  characters of visible text across 10 sections — roughly 1,100 characters per
-  section. Match that density. 4 pages is the target, 5 is the ceiling.
+- The approved reference sheet carries about 1,100 characters of visible text per
+  outline section — 4 letter pages for its 10 sections. Match that density: the
+  budget is per section, so a division with more sections earns proportionally
+  more pages, and one with fewer earns fewer. Never pad a section to reach it.
 - A recent build came back at 41,000 characters over 8 pages with the same 10
   sections: four times the text. Every value in it was accurate and it was still
   a failure. Accuracy is not the same as fitness for use.
-- This is a card someone reads on a jobsite, standing up, looking for one number.
-  It is not a summary of the specification. The test for a row is not "is this
-  true" but "would someone otherwise have to stop and go look this up".
+- This is a card someone reads with a takeoff open or standing on a jobsite,
+  looking for one number. It is not a summary of the specification. The test for
+  a row is not "is this true" but "would someone otherwise have to stop and go
+  look this up".
 - LENGTH DISCIPLINE APPLIES TO THE SHEET ONLY. The checklist has no length limit.
   Depth of analysis, every conflict, every gap, all reasoning — that goes in the
   checklist, at whatever length it takes. Cutting the sheet must never mean
@@ -220,7 +395,10 @@ template CSS inside a <style> block in <head>)
 (a JSON array — one object per discrepancy, same set that appears in the
 checklist's discrepancy log, in the same order. Shape:
 [{"id":"D-01","severity":"high|medium|low","kind":"conflict|gap|overlap|ambiguity",
-  "location":"22 70 00 §3.3.I vs NFPA 54 §7.3.1","issue":"...","resolution":"..."}]
+  "location":"22 70 00 §3.3.I vs NFPA 54 §7.3.1",
+  "affects":"Outdoor gas piping above 5 psi",
+  "issue":"the Problem line, without its label",
+  "resolution":"the Sheet shows and Do this lines, without their labels"}]
 Emit [] if there are none.)
 <<<END_DISCREPANCIES_JSON>>>
 
@@ -260,7 +438,7 @@ ${outline}
 
 DIVISION: ${division.name}
 BANNER TITLE: ${division.bannerTitle}
-BANNER SUBTITLE: FIELD CHEAT SHEET · ${division.divisionLabel}
+BANNER SUBTITLE: CHEAT SHEET · ${division.divisionLabel}
 FOOTER DIVISION: ${division.divisionShort}
 PROJECT: ${project.projectName}
 PROJECT SUB: ${orBlank(project.projectSub, '(none given — omit the line)')}
@@ -275,19 +453,134 @@ LEGEND DRAWING: ${orBlank(
 
 // ---------------------------------------------------------------- the call
 
+/** A Phase 1 data block — one spec section, already read and structured. */
+export interface ComposeBlock {
+  sectionNumber: string;
+  title: string | null;
+  markdown: string;
+}
+
+/**
+ * Raw spec sections, grouped by role. Primary first, so the sheet's backbone is
+ * read before the material that qualifies it.
+ */
+function buildSpecText(specs: SpecInput[]): string {
+  const one = (s: SpecInput, kind: string) =>
+    `=== ${kind} SPEC SECTION ${s.sectionNumber} (source file: ${s.fileName}) ===\n\n${s.text}`;
+
+  const primary = specs.filter((s) => s.role !== 'supporting');
+  const supporting = specs.filter((s) => s.role === 'supporting');
+
+  return [
+    ...primary.map((s) => one(s, 'PRIMARY')),
+    ...(supporting.length
+      ? [
+          '=== THE SECTIONS BELOW ARE SUPPORTING CONTEXT ===\n' +
+            'They are the rest of the division, supplied so that a requirement governing\n' +
+            "this trade's work from outside its own sections is not missed. Apply the\n" +
+            'SUPPORTING SECTIONS rules.',
+          ...supporting.map((s) => one(s, 'SUPPORTING')),
+        ]
+      : []),
+  ].join('\n\n');
+}
+
+function buildBlockText(blocks: ComposeBlock[]): string {
+  return blocks.map((b) => b.markdown).join('\n\n');
+}
+
+const SPEC_LEAD_IN =
+  'Here are the specification sections. Generate the cheat sheet and checklist.';
+
+/**
+ * Composing from blocks is a different job from composing from raw spec, and the
+ * difference is worth stating: the reading has already been done, so the work is
+ * selection and layout, and the blocks are the only record of the spec that will
+ * reach the sheet.
+ */
+const BLOCKS_LEAD_IN = `Below are DATA BLOCKS — one per specification section, each already read out of
+the spec by an earlier pass. Every table, note and callout carries the paragraph
+it came from.
+
+Build the cheat sheet and checklist from these blocks.
+
+- The blocks are now your only source. You cannot go back to the spec, so do not
+  assume a value exists that no block states.
+- Each block names the outline sections it feeds. Honour that, but you decide
+  what actually earns space — a block offering more than fits is normal, and
+  cutting is your job.
+- Blocks were read one section at a time, so no block saw any other. Conflicts
+  BETWEEN blocks are yours to find, and they are the most valuable entries in the
+  discrepancy log: two sections giving different answers for the same size,
+  pressure or condition.
+- Roll up each block's own DISCREPANCIES entries into the log as well.
+- A block's EXCLUDED list records what an earlier pass deliberately left out. Do
+  not reinstate it without reason.`;
+
+/**
+ * Sections that relate to the trade but were not read. Naming them on the
+ * checklist is the difference between a reader knowing where to look and never
+ * learning the section existed — on a full project manual the fire alarm section
+ * governs smoke damper interlocks, and nothing else on the sheet would say so.
+ */
+function buildReferredBlock(referred: ReferredSection[]): string {
+  if (referred.length === 0) return '';
+
+  const rows = referred
+    .map((r) => {
+      const pages =
+        r.startPage !== null ? `pages ${r.startPage}-${r.endPage}` : 'page range unknown';
+      return `- ${r.sectionNumber} ${r.title ?? ''} (${pages}) — ${r.summary}`;
+    })
+    .join('\n');
+
+  return `
+
+RELATED SECTIONS THAT WERE NOT READ — CONTEXT ONLY, DO NOT LIST THEM:
+These sections were identified as bearing on this trade's work but sit outside
+the divisions this sheet is built from, so nobody has read them. They are not
+discrepancies, they do not go in any document, and you must not invent
+requirements from them.
+
+They are here for one purpose: if the sheet would otherwise state something as
+complete when one of these sections plainly governs part of it, say so in the
+relevant row rather than implying the sheet covers it. Otherwise ignore them.
+
+${rows}`;
+}
+
 export async function generateSheet(
   division: Division,
   project: ProjectInfo,
   specs: SpecInput[],
 ): Promise<ModelOutput> {
-  const anthropic = getClient();
+  return composeSheet(division, project, buildSpecText(specs), SPEC_LEAD_IN, specs.length);
+}
 
-  const specText = specs
-    .map(
-      (s) =>
-        `=== SPEC SECTION ${s.sectionNumber} (source file: ${s.fileName}) ===\n\n${s.text}`,
-    )
-    .join('\n\n');
+/** Phase 2 — build the sheet from Phase 1 blocks rather than raw spec text. */
+export async function generateSheetFromBlocks(
+  division: Division,
+  project: ProjectInfo,
+  blocks: ComposeBlock[],
+  referred: ReferredSection[] = [],
+): Promise<ModelOutput> {
+  return composeSheet(
+    division,
+    project,
+    buildBlockText(blocks) + buildReferredBlock(referred),
+    BLOCKS_LEAD_IN,
+    blocks.length,
+  );
+}
+
+async function composeSheet(
+  division: Division,
+  project: ProjectInfo,
+  bodyText: string,
+  leadIn: string,
+  sectionCount: number,
+): Promise<ModelOutput> {
+  const anthropic = getClient();
 
   const params = {
     model: MODEL,
@@ -310,8 +603,7 @@ export async function generateSheet(
       {
         role: 'user',
         content:
-          `${buildJobHeader(division, project)}\n\n` +
-          `Here are the specification sections. Generate the cheat sheet and checklist.\n\n${specText}`,
+          `${buildJobHeader(division, project)}\n\n${leadIn}\n\n${bodyText}`,
       },
     ],
   } as unknown as Anthropic.MessageStreamParams;
@@ -319,9 +611,9 @@ export async function generateSheet(
   // Streaming: max_tokens is far above the ~16k point where a non-streaming
   // request risks an SDK HTTP timeout, and it keeps the Vercel function's
   // connection alive while the model works.
-  const stream = anthropic.messages.stream(params);
-
-  const message = await stream.finalMessage();
+  const message = await withRetry('generate:sheet', () =>
+    anthropic.messages.stream(params).finalMessage(),
+  );
 
   if (message.stop_reason === 'refusal') {
     throw new Error(
@@ -370,13 +662,13 @@ export async function generateSheet(
         `(stop_reason=${message.stop_reason}) — requesting separately`,
     );
 
-    const salvaged = await generateChecklistOnly(division, project, specText);
+    const salvaged = await generateChecklistOnly(division, project, bodyText);
 
     return {
       cheatsheetHtml: parsed.cheatsheetHtml,
       checklistHtml: salvaged.checklistHtml ?? fallbackChecklist(),
       discrepancies: salvaged.discrepancies,
-      sectionCount: specs.length,
+      sectionCount,
       recoveredChecklist: true,
     };
   }
@@ -385,7 +677,7 @@ export async function generateSheet(
     cheatsheetHtml: parsed.cheatsheetHtml,
     checklistHtml: parsed.checklistHtml,
     discrepancies: parsed.discrepancies,
-    sectionCount: specs.length,
+    sectionCount,
     recoveredChecklist: false,
   };
 }
@@ -431,7 +723,9 @@ async function generateChecklistOnly(
     ],
   } as unknown as Anthropic.MessageStreamParams;
 
-  const message = await anthropic.messages.stream(params).finalMessage();
+  const message = await withRetry('generate:checklist', () =>
+    anthropic.messages.stream(params).finalMessage(),
+  );
   logUsage('checklist', message);
 
   const text = message.content

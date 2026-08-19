@@ -21,7 +21,7 @@ export interface Division {
   name: string;
   /** Goes in the banner .ptitle. */
   bannerTitle: string;
-  /** Goes in the banner .psub after "FIELD CHEAT SHEET · ". */
+  /** Goes in the banner .psub after "CHEAT SHEET · ". */
   divisionLabel: string;
   /** Short form for the footer, e.g. "DIV 22". */
   divisionShort: string;
@@ -52,29 +52,52 @@ export const DIVISIONS: Division[] = [
     bannerTitle: 'PLUMBING',
     divisionLabel: 'DIVISION 22',
     divisionShort: 'DIV 22',
-    blurb: 'Domestic water, sanitary, storm, gas, fixtures',
+    blurb: 'Domestic water, sanitary, storm, fuel gas, medical gas, fixtures',
     icon: 'wrench',
+    /**
+     * Offices number Division 22 differently. Some put domestic water piping in
+     * 22 11 19; others use 22 11 16 for the piping and 22 11 19 for specialties.
+     * Both are listed so the pipe-material spec is primary either way — on the
+     * Carrollwood CEP set, listing only 22 11 19 made the actual pipe-material
+     * section (22 11 16) supporting and the sheet cited the wrong source.
+     *
+     * Fuel is likewise not always natural gas: a central energy plant may run
+     * fuel oil instead. Both are primary; whichever the job has is the one the
+     * sheet builds from.
+     */
     tier1: [
-      { number: '22 11 19', title: 'Domestic Water Piping' },
+      { number: '22 11 16', title: 'Domestic Water Piping' },
+      { number: '22 11 19', title: 'Domestic Water Piping / Specialties' },
       { number: '22 13 16', title: 'Sanitary Waste and Vent Piping' },
+      { number: '22 14 13', title: 'Storm Drainage Piping' },
       { number: '22 05 29', title: 'Hangers and Supports' },
       { number: '22 07 00', title: 'Plumbing Insulation' },
       { number: '22 05 23', title: 'General-Duty Valves' },
       { number: '22 40 00', title: 'Plumbing Fixtures' },
       { number: '22 05 53', title: 'Identification' },
       { number: '22 70 00', title: 'Natural Gas' },
+      { number: '22 64 11', title: 'Facility Fuel Oil Piping' },
+      // BCH self-performs medical gas, and on a healthcare job it is a large
+      // part of the plumbing scope with rules that behave like nothing else in
+      // the division. Numbering varies: 22 60 00 in some books, 22 61/62/63 in
+      // others, so all the common forms are listed.
+      { number: '22 60 00', title: 'Medical Gas Piping' },
+      { number: '22 60 13', title: 'Medical Gas Startup and Certification' },
+      { number: '22 61 00', title: 'Compressed Air — Healthcare' },
+      { number: '22 62 19', title: 'Medical Vacuum Pumps' },
+      { number: '22 63 00', title: 'Gas Systems for Healthcare' },
     ],
     // Mirrors the approved Division 22 sheet in assets/BCH-Cheat-Sheet-TEMPLATE.html.
     outline: [
       {
         title: 'PIPE MATERIAL — BY SYSTEM & LOCATION',
-        sources: ['22 11 19', '22 13 16', '22 70 00'],
+        sources: ['22 11 16', '22 11 19', '22 13 16', '22 14 13', '22 70 00', '22 64 11'],
         covers:
-          'One row per system (CW, HW, HWR, S, V, ST, CD, GW, OW, G). Columns: above ground concealed, above ground exposed, below ground, notes. Colour spine per system.',
+          'One row per system (CW, HW, HWR, S, V, ST, CD, GW, OW, G). Columns: above ground concealed, above ground exposed, below ground, notes. Colour spine per system. Cite the section that actually carries the material schedule on this job — the numbering varies by office.',
       },
       {
         title: 'JOINTS & CONNECTIONS',
-        sources: ['22 11 19', '22 13 16'],
+        sources: ['22 11 16', '22 11 19', '22 13 16', '22 14 13'],
         covers: 'Per material: joint method and the requirements that govern it.',
       },
       {
@@ -91,9 +114,9 @@ export const DIVISIONS: Division[] = [
       },
       {
         title: 'DRAINAGE — SLOPES, CLEANOUTS & DRAINS',
-        sources: ['22 13 16'],
+        sources: ['22 13 16', '22 14 13'],
         covers:
-          'Minimum slopes by pipe size, cleanout placement rules, floor drains and backwater valves, underground utility separation.',
+          'Minimum slopes by pipe size, cleanout placement rules, floor drains and backwater valves, underground utility separation. Cover sanitary and storm both, and say which rules differ between them.',
       },
       {
         title: 'VALVES & SPECIALTIES',
@@ -107,21 +130,31 @@ export const DIVISIONS: Division[] = [
         covers: 'Mounting heights standard vs accessible, approved manufacturers.',
       },
       {
+        title: 'FUEL SYSTEMS — GAS & FUEL OIL',
+        sources: ['22 70 00', '22 64 11', '22 64 13'],
+        covers:
+          'Whichever fuel system this job actually has. Pipe material by pressure and location, valves, hanger spacing, pressure testing, and the fuel-specific prohibitions. Fuel oil adds tanks, pumps, containment and leak detection — cover those when the job has them. If the job has neither fuel system, say so in one line and keep the section to that line.',
+      },
+      {
+        // Appended rather than slotted in beside the other piped systems: the
+        // section numbers are positional, and moving them would relabel every
+        // section on every sheet built so far.
+        title: 'MEDICAL GAS & VACUUM',
+        sources: ['22 60 00', '22 60 13', '22 61 00', '22 62 19', '22 63 00'],
+        covers:
+          'Medical gas, medical air and vacuum, which BCH self-performs. Tube type and temper by system and size (Type K/L to ASTM B819, cleaned and capped for oxygen service). Brazing: filler by joint, whether flux is permitted, and the nitrogen purge required while brazing. Support spacing where it differs from other copper. Valves, zone valve boxes, outlets and alarms. Installer and verifier certification (ASSE 6010 / 6015 / 6030). The verification sequence before a system may be used — initial pressure, standing pressure, cross-connection and purity — belongs here rather than in TESTING, because it is a gated sequence a system must pass in order, not a pressure test. Say plainly which requirements come from NFPA 99 rather than the spec. If the job has no medical gas, say so in one line and keep the section to that line.',
+      },
+      {
         title: 'IDENTIFICATION & LABELING',
         sources: ['22 05 53'],
         covers:
-          'Pipe label colours, label spacing, valve tags, underground warning tape colour code.',
+          'Pipe label colours, label spacing, valve tags, underground warning tape colour code. Cover every system on this sheet, including fuel and medical gas.',
       },
       {
         title: 'TESTING & STERILIZATION',
-        sources: ['22 11 19', '22 13 16'],
-        covers: 'Test medium, pressure or head, duration, acceptance, and sequencing.',
-      },
-      {
-        title: 'NATURAL GAS SYSTEMS',
-        sources: ['22 70 00'],
+        sources: ['22 11 16', '22 11 19', '22 13 16', '22 14 13', '22 70 00', '22 64 11'],
         covers:
-          'Pipe material by pressure and location, valves, hanger spacing, pressure testing, gas-specific prohibitions.',
+          'Test medium, pressure or head, duration, acceptance, and sequencing, for every system on this sheet including fuel. Medical gas verification is not repeated here — it lives in its own section.',
       },
     ],
     skip: [
@@ -162,6 +195,13 @@ export const DIVISIONS: Division[] = [
       { number: '23 51 00', title: 'Breechings, Chimneys and Stacks' },
       { number: '23 51 23', title: 'Gas Vents' },
       { number: '23 05 48', title: 'Vibration Controls' },
+      // Measured on the Carrollwood CEP set: as supporting sections these never
+      // reached the sheet. FIELD TESTING cited only the duct spec while the
+      // 48,000-character TAB section went uncited, and the fan section was built
+      // without the fan spec. They belong to the air side and drive real
+      // sections of the outline, so they are primary.
+      { number: '23 05 93', title: 'Testing, Adjusting and Balancing' },
+      { number: '23 34 16', title: 'Centrifugal HVAC Fans' },
     ],
     outline: [
       {
@@ -216,12 +256,13 @@ export const DIVISIONS: Division[] = [
         title: 'AIR TERMINAL UNITS',
         sources: ['23 36 00'],
         covers:
-          'Casing, liner, volume damper, hydronic coil, actuator, operating range, connections, labelling.',
+          'Casing, liner, volume damper, hydronic coil, actuator, operating range, connections, labelling. If no terminal-unit section was issued for this job, say so in one line and keep the section to that line.',
       },
       {
-        title: 'HVAC POWER VENTILATORS',
-        sources: ['23 34 23'],
-        covers: 'Fan type vs housing/wheel vs drive vs notes. Mounting and field QC.',
+        title: 'HVAC POWER VENTILATORS & FANS',
+        sources: ['23 34 23', '23 34 16'],
+        covers:
+          'Fan type vs housing/wheel vs drive vs notes, covering both power ventilators and any separately specified centrifugal fans. Mounting, vibration isolation base, and field QC.',
       },
       {
         title: 'GRILLES, REGISTERS & DIFFUSERS',
@@ -232,7 +273,7 @@ export const DIVISIONS: Division[] = [
         title: 'BREECHINGS, CHIMNEYS, STACKS & GAS VENTS',
         sources: ['23 51 00', '23 51 23'],
         covers:
-          'Material and construction, clearances and termination, slope and drainage, sealant by flue-gas temperature.',
+          'Material and construction, clearances and termination, slope and drainage, sealant by flue-gas temperature. If neither section was issued for this job, say so in one line and keep the section to that line — do not pad it from insulation or duct sections.',
       },
       {
         title: 'IDENTIFICATION & LABELING',
@@ -241,10 +282,10 @@ export const DIVISIONS: Division[] = [
           'Label type vs spec, pipe/duct label colours, placement and spacing rules, valve tags.',
       },
       {
-        title: 'FIELD TESTING',
-        sources: ['23 31 13'],
+        title: 'FIELD TESTING & BALANCING',
+        sources: ['23 31 13', '23 05 93'],
         covers:
-          'Duct leakage test percentages by category, test method and sequencing, cleanliness and fan field checks.',
+          'Duct leakage test percentages by category, test method and sequencing, cleanliness and fan field checks. Plus the TAB requirements the sheet metal crew has to build for: tolerances on measured vs design airflow, required test ports and access, damper positions at balance, and what must be complete before balancing starts.',
       },
     ],
     skip: [
@@ -283,6 +324,13 @@ export const DIVISIONS: Division[] = [
       { number: '23 07 19', title: 'HVAC Piping Insulation' },
       { number: '23 05 53', title: 'Identification for HVAC' },
       { number: '23 23 00', title: 'Refrigerant Piping' },
+      // Measured on the Carrollwood CEP set: as supporting sections these never
+      // reached the sheet. The outline has a section titled CHEMICAL TREATMENT
+      // that cited only the piping spec while the 42,000-character water
+      // treatment section went uncited. Pumps set the connection, strainer and
+      // isolation requirements the pipe fitter actually builds to.
+      { number: '23 25 00', title: 'HVAC Water Treatment' },
+      { number: '23 21 23', title: 'Hydronic Pumps' },
     ],
     outline: [
       {
@@ -331,7 +379,7 @@ export const DIVISIONS: Division[] = [
         title: 'REFRIGERANT PIPING',
         sources: ['23 23 00'],
         covers:
-          'Tube type and temper, joints, line sizing constraints, supports, and required accessories.',
+          'Tube type and temper, joints, line sizing constraints, supports, and required accessories. If no refrigerant piping section was issued for this job, say so in one line and keep the section to that line.',
       },
       {
         title: 'IDENTIFICATION & LABELING',
@@ -341,9 +389,9 @@ export const DIVISIONS: Division[] = [
       },
       {
         title: 'TESTING, FLUSHING & CHEMICAL TREATMENT',
-        sources: ['23 21 13', '23 23 00'],
+        sources: ['23 21 13', '23 23 00', '23 25 00'],
         covers:
-          'Test medium, pressure, duration and acceptance per system. Flushing and cleaning sequence before insulation.',
+          'Test medium, pressure, duration and acceptance per system. Flushing and cleaning sequence before insulation. Then the chemical treatment the fitter has to accommodate: cleaning and passivation sequence, who charges the system and when, and the pot feeders, test ports, coupon racks and isolation the piping must include.',
       },
     ],
     skip: [
