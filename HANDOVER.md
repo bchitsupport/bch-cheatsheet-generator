@@ -40,11 +40,12 @@ it breaks, and the failure is quiet.
 This is the blocker. Without it the application starts, serves its pages, and
 can do nothing at all.
 
-It must be BCH's own key on a BCH-owned account, not a personal one. While
-setting the account up, **set a monthly spend limit on it**. There is
-deliberately no spend cap in the application — a cap that halts a build halfway
-wastes everything already spent on it — so the account limit is the only
-backstop that exists. See *What it costs* for the numbers to pick a limit from.
+It must be BCH's own key on a BCH-owned account, not a personal one.
+
+There is deliberately no spend cap in the application — a cap that halts a build
+halfway wastes everything already spent on it — so what a run costs is governed
+by the estimate shown before it starts, and by whoever decides to press the
+button. See *What it costs* for the numbers.
 
 ### 2. The machine
 
@@ -200,8 +201,9 @@ watch it rather than walking away.
 
 ### 8. Ongoing ownership
 
-- **Spend.** There is no cap in the app. The monthly limit on the Anthropic
-  account is the backstop; somebody should be looking at the bill.
+- **Spend.** There is no cap in the app, so the estimate on the review screen
+  is the guard and it only works if somebody reads it. Whoever owns this should
+  be looking at the bill often enough to notice a change in how it is being used.
 - **Disk.** `out/` and `.block-cache/` grow without limit and hold content
   derived from client specifications. Both are safe to delete when no run is in
   progress — the cache only costs a re-read if it is cleared, and `out/` is only
@@ -449,8 +451,7 @@ reducing, the lever is how much the model writes, not caching or input size.
 
 **There is no spend cap in the app**, by decision: a cap that halts a build
 halfway wastes everything already spent on it. The estimate shown before a run is
-the guard. A monthly limit can be set on the Anthropic account itself as a
-backstop.
+the guard.
 
 
 ### The block cache works — within one caveat
