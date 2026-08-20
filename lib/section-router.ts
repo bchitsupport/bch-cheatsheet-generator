@@ -85,6 +85,33 @@ const ADMINISTRATIVE_DIVISIONS = new Set(['00', '01']);
 
 const divisionOf = (sectionNumber: string) => sectionNumber.replace(/\D/g, '').slice(0, 2);
 
+/**
+ * One sentence naming what the upload turned out to contain.
+ *
+ * The review screen says which trades were found; the PDFs do not, and once they
+ * are downloaded that record is gone. Someone handed two sheets cannot tell
+ * whether the third trade was absent from the specification or forgotten by
+ * whoever ran the tool, and those call for different responses. So each
+ * checklist carries it.
+ */
+export function describeCoverage(trades: TradePresence[], built: DivisionId[]): string {
+  const name = (id: DivisionId) => trades.find((t) => t.id === id)?.name ?? id;
+  const absent = trades.filter((t) => !t.present && !built.includes(t.id));
+
+  const builtNames = built.map(name).join(' and ');
+  if (absent.length === 0) {
+    return `This upload covered all three trades; sheets were built for ${builtNames}.`;
+  }
+
+  return (
+    `This upload contained ${builtNames} specifications. No ${absent
+      .map((t) => t.name)
+      .join(' or ')} sections were found in it, so no sheet was built for ` +
+    `${absent.length === 1 ? 'that trade' : 'those trades'}. If that scope exists on this ` +
+    'job, its specification was not part of what was uploaded.'
+  );
+}
+
 export interface ReadingPlan<T> {
   /** Sections to read in full during Phase 1. */
   toRead: T[];

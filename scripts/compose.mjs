@@ -57,7 +57,7 @@ const res = await fetch(`${BASE}/api/compose`, {
       projectName: process.env.PROJECT_NAME,
       projectSub: process.env.PROJECT_SUB ?? '',
       preparerName: process.env.PREPARER_NAME ?? 'Joshua Ahwai',
-      preparerTitle: process.env.PREPARER_TITLE ?? 'Assistant Project Manager Intern',
+      preparerTitle: process.env.PREPARER_TITLE ?? '',
       preparerEmail: process.env.PREPARER_EMAIL ?? 'joshua.ahwai@bchmechanical.com',
       legendDrawing: process.env.LEGEND_DRAWING ?? '',
     },

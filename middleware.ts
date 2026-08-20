@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { AUTH_CONFIGURED, auth } from '@/auth';
+import { AUTH_CONFIGURED, NETWORK_ONLY_ACCESS, auth } from '@/auth';
 
 /**
  * Who may reach the tool.
@@ -25,11 +25,21 @@ export default async function middleware(request: NextRequest) {
   if (PUBLIC_PATHS.some((p) => p.test(pathname))) return NextResponse.next();
 
   if (!AUTH_CONFIGURED) {
+    // Someone decided the network is the control. Serve.
+    if (NETWORK_ONLY_ACCESS) return NextResponse.next();
     if (isLocal(request)) return NextResponse.next();
+
+    // Neither configured nor deliberately opted out — this is an unfinished
+    // setup, and serving it would put a tool that spends money and reads
+    // confidential bid documents on the network unprotected by accident.
     return new NextResponse(
-      'Sign-in is not configured on this deployment, so it is refusing to serve.\n\n' +
-        'Set AUTH_MICROSOFT_ENTRA_ID_ID, AUTH_MICROSOFT_ENTRA_ID_SECRET,\n' +
-        'AUTH_MICROSOFT_ENTRA_ID_ISSUER and AUTH_SECRET, then restart.\n',
+      'This deployment has no access control configured, so it is refusing to serve.\n\n' +
+        'Either set up sign-in:\n' +
+        '  AUTH_MICROSOFT_ENTRA_ID_ID, AUTH_MICROSOFT_ENTRA_ID_SECRET,\n' +
+        '  AUTH_MICROSOFT_ENTRA_ID_ISSUER, AUTH_SECRET, AUTH_URL\n\n' +
+        'or state that the network is the only control:\n' +
+        '  ACCESS_CONTROL=network-only\n\n' +
+        'Then restart.\n',
       { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } },
     );
   }

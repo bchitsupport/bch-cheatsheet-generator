@@ -25,7 +25,7 @@ const FIELDS: {
   {
     key: 'preparerTitle',
     label: 'Preparer title',
-    placeholder: 'Assistant Project Manager Intern',
+    placeholder: 'Project Manager',
   },
   {
     key: 'preparerEmail',

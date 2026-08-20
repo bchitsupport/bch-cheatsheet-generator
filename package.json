@@ -13,7 +13,6 @@
     "check:layout": "node scripts/check-page-breaks.mjs",
     "check:fonts": "node scripts/check-fonts.mjs",
     "measure": "node scripts/measure-pages.mjs",
-    "build:skill": "node scripts/build-skill.mjs",
     "run:division": "node scripts/run-division.mjs",
     "split": "node scripts/split-spec.mjs",
     "blocks": "node scripts/blocks.mjs",

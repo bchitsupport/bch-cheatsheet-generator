@@ -22,6 +22,25 @@ export const AUTH_CONFIGURED = Boolean(
 );
 
 /**
+ * Deliberately running with the network as the only access control.
+ *
+ * BCH chose this over single sign-on: the tool sits on the internal network, so
+ * reaching it at all requires being on the LAN or the VPN. That is a legitimate
+ * arrangement for an internal tool and it removes the HTTPS certificate that
+ * Entra would otherwise require, which was the expensive part of standing this
+ * up.
+ *
+ * It is a separate switch from "no credentials configured" on purpose. Absent
+ * credentials means somebody has not finished the setup and the app refuses to
+ * serve; this value means somebody decided. The two must not look the same.
+ *
+ * What is given up: no record of who generated what, and access does not end by
+ * itself when someone leaves the company — it ends when their network account
+ * does.
+ */
+export const NETWORK_ONLY_ACCESS = process.env.ACCESS_CONTROL === 'network-only';
+
+/**
  * With no credentials configured the app runs open, as it does today on a
  * laptop. It fails closed the moment it is deployed somewhere reachable —
  * see the check in middleware.ts, which refuses to serve a non-local host

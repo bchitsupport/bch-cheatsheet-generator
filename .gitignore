@@ -34,3 +34,7 @@ skill/bch-cheat-sheet.zip
 # Spec books staged for browser testing. Client documents must never be served
 # from public/ or committed.
 /public/uitest/
+
+# Data blocks kept between runs so a failed compose does not discard the
+# reading phase. Derived from client spec text — never commit.
+/.block-cache/

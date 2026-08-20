@@ -132,7 +132,11 @@ export async function withRetry<T>(label: string, run: () => Promise<T>): Promis
       lastError = err;
       const text = err instanceof Error ? err.message : String(err);
       const transient =
-        /overloaded|rate_limit|429|500|502|503|529|ECONNRESET|ETIMEDOUT|socket hang up/i.test(
+        // `terminated` and `aborted` are what Node's fetch throws when the
+        // connection drops mid-response — the same fault as ECONNRESET, under a
+        // different name. A 16-minute compose died on it and was not retried,
+        // throwing away the whole reading phase that preceded it.
+        /overloaded|rate_limit|429|500|502|503|529|ECONNRESET|ETIMEDOUT|socket hang up|terminated|aborted|fetch failed/i.test(
           text,
         );
       if (!transient || attempt === DELAYS_MS.length) break;
@@ -563,11 +567,17 @@ export async function generateSheetFromBlocks(
   project: ProjectInfo,
   blocks: ComposeBlock[],
   referred: ReferredSection[] = [],
+  coverage = '',
 ): Promise<ModelOutput> {
+  const coverageBlock = coverage
+    ? `\n\nWHAT THIS UPLOAD COVERED — put this sentence in the checklist, directly under\n` +
+      `the header, in the muted colour, exactly as written and with nothing added:\n\n${coverage}`
+    : '';
+
   return composeSheet(
     division,
     project,
-    buildBlockText(blocks) + buildReferredBlock(referred),
+    buildBlockText(blocks) + buildReferredBlock(referred) + coverageBlock,
     BLOCKS_LEAD_IN,
     blocks.length,
   );

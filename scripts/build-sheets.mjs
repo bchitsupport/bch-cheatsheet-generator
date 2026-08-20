@@ -59,7 +59,7 @@ async function run(trades) {
     form.set('projectName', process.env.PROJECT_NAME);
     form.set('projectSub', process.env.PROJECT_SUB ?? '');
     form.set('preparerName', process.env.PREPARER_NAME ?? 'Joshua Ahwai');
-    form.set('preparerTitle', process.env.PREPARER_TITLE ?? 'Assistant Project Manager Intern');
+    form.set('preparerTitle', process.env.PREPARER_TITLE ?? '');
     form.set('preparerEmail', process.env.PREPARER_EMAIL ?? 'joshua.ahwai@bchmechanical.com');
     form.set('legendDrawing', process.env.LEGEND_DRAWING ?? '');
   }

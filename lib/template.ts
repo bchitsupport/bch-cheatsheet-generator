@@ -446,6 +446,8 @@ export const CHECKLIST_PATTERNS = String.raw`
   </div>
   <div class="strip"><i style="background:#0e7a43"></i><i style="background:#1d6fb8"></i><i style="background:#33383b"></i><i style="background:#b45309"></i><i style="background:#d99a00"></i></div>
 
+  <p style="margin:10px 0 0;color:#6b7280">This upload contained plumbing specifications. No sheet metal &amp; air distribution or hydronic &amp; mechanical piping sections were found in it, so no sheet was built for those trades. If that scope exists on this job, its specification was not part of what was uploaded.</p>
+
   <h2>1 &middot; DISCREPANCY LOG</h2>
   <p style="margin:4px 0 0;color:#6b7280">High and medium severity, highest first. Read the HIGH entries before pricing or building from the sheet.</p>
   <table>
