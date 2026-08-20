@@ -2,8 +2,11 @@ node_modules/
 .next/
 .next-dev/
 out/
-build/
-dist/
+# Anchored to the repo root. Unanchored, `build/` matched app/api/build/ — the
+# route the whole two-phase pipeline runs through — and kept it out of the
+# repository entirely, so a fresh clone had no working /api/build at all.
+/build/
+/dist/
 
 .env
 .env.local
