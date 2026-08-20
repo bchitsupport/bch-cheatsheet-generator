@@ -46,6 +46,40 @@ reads confidential bid documents.
   `fonts.gstatic.com` — without the font hosts, documents render in the wrong
   typefaces and nothing warns you
 
+### Run it as a service, not from a terminal
+
+`npm start` in a shell dies when that session closes and does not come back after
+a reboot — the tool works until the first restart and then quietly does not.
+
+On Ubuntu, a systemd unit:
+
+```ini
+# /etc/systemd/system/cheatsheets.service
+[Unit]
+Description=BCH cheat sheet generator
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/cheatsheets
+ExecStart=/usr/bin/npm start
+Restart=always
+Environment=PORT=3000
+EnvironmentFile=/opt/cheatsheets/.env.local
+User=cheatsheets
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl enable --now cheatsheets
+```
+
+On Windows, NSSM or a scheduled task set to run at startup does the same job.
+
+A run takes 15–45 minutes, so `Restart=always` matters: a crash mid-build should
+bring the service back rather than leave the site down until somebody notices.
+
 ---
 
 ## How it works, and why
