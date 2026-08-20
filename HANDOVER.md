@@ -200,6 +200,21 @@ order, and `planReading` documents that its `sources` argument must be
 index-aligned with it. **If you add a step that looks a section up by number,
 that is the bug coming back.**
 
+That rule is also what lets a build skip the classifier. Both stages post to the
+same route with the same files, so pressing Build used to repeat the split and
+the classification the review screen had just shown — a second charge and several
+more minutes for an answer already on the user's screen. The client posts the
+reviewed manifest back and `reuseManifest` reconstitutes it.
+
+The split is still redone, because the section text has to come from somewhere
+and splitting costs nothing. It is also the check: a positional manifest is only
+valid against a split that produced the same sections in the same order, so
+`reuseManifest` verifies the count, every section number at every index, every
+role and every primary's targets before accepting any of it. Anything that does
+not line up returns null and the route classifies again and says so. Reading one
+section against its neighbour's classification would be far worse than paying
+twice.
+
 ### Absence and ignorance are different answers
 
 A trade with too few sections of its own reports as not present. That claim is
@@ -237,6 +252,13 @@ Measured on Opus 5 at high effort, Carrollwood Division 22, 19 sections:
 | Reading the sections | ~$3.60 |
 | Writing one sheet | ~$2.30 |
 | **One complete sheet + its log** | **~$6** |
+
+A scan is separate and much cheaper — one small-model call per thirty sections,
+about **$0.35** on a 216-page project manual and less on a single division. It is
+the guard before the money: it reports what is in the upload and what a build
+would cost, and stops. **A build no longer repeats it** — the reviewed manifest is
+posted back rather than worked out again, so the classification is paid for once
+per upload.
 
 At five sheets a week that is roughly **$1,600 a year**.
 
@@ -316,9 +338,12 @@ identification.
 
 **Sheet metal page-break defect.** One page comes out 77–81% full instead of
 ~95%. Section 14 is a two-column grid and Chromium will not split those across
-pages, so it moves whole. Cosmetic, no content lost, seen on three books. Fixing
-it means changing grid page-break behaviour across every sheet and regression
-testing all three divisions — worth a quiet hour, not a rushed one.
+pages, so it moves whole. Cosmetic, no content lost. Seen on three books and
+explicitly not on a fourth — a Division 23 book produced six sheet metal pages at
+97–99% fill — so it depends on where section 14 happens to land and will not
+reproduce on demand. Measure the sheet that showed it rather than any sheet.
+Fixing it means changing grid page-break behaviour across every sheet and
+regression testing all three divisions — worth a quiet hour, not a rushed one.
 
 **`out/` and `.block-cache/` grow without limit.** Both hold content derived from
 client specifications. On a long-lived server they need a cleanup policy. Neither
@@ -337,6 +362,12 @@ per-person and vanishes when browser data is cleared. Not a shared history.
   runs through, was silently untracked for months and never appeared in
   `git status`. A fresh clone had no `/api/build` at all. Do not remove the
   slash, and if you add an ignore rule for a build output, anchor it.
+- **The review screen opens with its two long lists folded shut.** The section
+  table and the pointer list are reference, not the decision, and open by default
+  they buried the three trade checkboxes and pushed the build button several
+  screens down. The counts sit on each closed summary, so nothing is hidden —
+  "16 shown · 101 supporting hidden" means exactly that, and the supporting rows
+  are one more click away inside.
 - **`/api/generate` and `run-division.mjs` still exist** and use the old
   single-pass path. Kept deliberately as a fallback and as the only way to
   reproduce a single-pass baseline for comparison.
@@ -366,14 +397,24 @@ two against the same specs before giving it to anyone.
 ## Useful commands
 
 ```bash
-npm run split -- <file.pdf>        # what sections are in a book? free, seconds
-npm run build:sheets -- <dir>      # scan only: what is in an upload, a few cents
+npm run split -- <file.pdf>            # what sections are in a book? free, seconds
+npm run split -- --verify <dir>        # regression test: split a folder of single
+                                       # section PDFs, check against their names
+npm run build:sheets -- <dir>          # scan only: what is in an upload
 npm run build:sheets -- <dir> --build out/x --trades plumbing
-npm run measure -- <sheet.pdf>     # page fill; flags a page under ~90%
-npm run check:fonts                # every character resolves to a webfont?
-npm run check:layout               # page-break rules still intact?
+npm run blocks -- <dir> <outDir>       # reading phase only, no sheets — the way to
+                                       # exercise the block cache without composing
+npm run measure -- <sheet.pdf>         # page fill; flags a page under ~90%
+npm run check:fonts                    # every character resolves to a webfont?
+npm run check:layout                   # page-break rules still intact?
 npm run typecheck
 ```
+
+The two `--verify` folders are the splitter regression test, and they have a known
+right answer: 19/19 and 29/29 sections with exact page ranges. Run both after any
+change to `lib/spec-splitter.ts`, and split every book you have before and after —
+page ranges moving on a book you were not thinking about is the failure that
+matters.
 
 `PROJECT_NAME` must be set for anything that builds. The scripts refuse to run
 without it rather than banner the wrong job — an earlier version had a project
@@ -389,6 +430,19 @@ code fault.
 **A run reports no error but produces no sheets** — the dev server rebuilt
 mid-run and the request hit a stale deployment. Restart it. The scripts now catch
 this and say so.
+
+**The page emptied itself in the middle of a run** — in development, saving a file
+that will not hot-reload cleanly makes Next do a full reload, and a full reload
+throws away the uploaded files, the manifest and the progress card while the
+server carries on spending. The run finishes and its output goes nowhere. Do not
+edit code while a build is running, and if you must, expect to lose the screen
+rather than the money.
+
+**Two dev servers, and the tool behaves like an older version of itself** — Next
+takes the next free port when 3000 is busy, so a forgotten server keeps answering
+on 3000 while the one you just started is on 3001. It has caused an afternoon of
+confusion more than once. `netstat -ano | findstr :300` lists them; kill the
+strays and keep one.
 
 **A long run dies with `terminated`, `ECONNRESET` or `overloaded`** — transient,
 and `withRetry` in `lib/anthropic.ts` handles all of them with backoff. If a new
