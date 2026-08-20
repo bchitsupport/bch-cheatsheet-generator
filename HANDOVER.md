@@ -248,6 +248,36 @@ halfway wastes everything already spent on it. The estimate shown before a run i
 the guard. A monthly limit can be set on the Anthropic account itself as a
 backstop.
 
+
+### The block cache works — within one caveat
+
+`.block-cache/` holds each section's data block, so a run that dies while writing
+sheets does not pay to read the book again. Measured on two sections, second run
+immediately after the first:
+
+```
+[blocks] sections=2 read=2 reused=0 in=5230 out=6591   60,115ms
+[blocks] sections=2 read=0 reused=2 in=0    out=0      13,655ms
+```
+
+Zero tokens the second time. On a full division that is the difference between
+$2.30 and $6 for a retry.
+
+**The caveat is in the key.** It hashes the model, the system prompt, the section
+text — and the section's `targets` and `supportingFor`, which come from the
+classifier rather than from the book. The classifier is a model call and does
+vary between runs: two scans of the same manual gave 9 and then 10 primary
+sections for plumbing. A section whose targets come back different gets a
+different key and is read again.
+
+So a hit is not guaranteed by identical input, only made likely by it. That is
+the right trade — a block built for one set of targets should not be served for
+another — but it means the cache helps a retry most when the retry follows
+quickly and the classification lands the same way. **Check the log line after any
+repeated run:** `[blocks] ... read=N reused=M`. If `reused` is 0 on a job you
+have just run, compare the two manifests before assuming the cache is broken;
+the likelier culprit is that the classifier moved.
+
 ---
 
 ## Known problems
@@ -289,12 +319,6 @@ identification.
 pages, so it moves whole. Cosmetic, no content lost, seen on three books. Fixing
 it means changing grid page-break behaviour across every sheet and regression
 testing all three divisions — worth a quiet hour, not a rushed one.
-
-**The block cache is unverified.** `.block-cache/` should let a failed compose
-reuse the reading phase instead of redoing it ($2.30 instead of $6). It was built
-but never proven to hit — credits ran out before the test. Check the log line
-after any run: `[blocks] ... read=N reused=M`. If `reused` is always 0 on a
-repeated job, the cache keys are not stable and it is doing nothing.
 
 **`out/` and `.block-cache/` grow without limit.** Both hold content derived from
 client specifications. On a long-lived server they need a cleanup policy. Neither
