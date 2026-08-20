@@ -141,49 +141,6 @@ export default function ManifestReview({
         })}
       </div>
 
-      {/* ---- the sections themselves */}
-      <div className="mt-5 overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead>
-            <tr className="border-b border-bch-line text-[11px] uppercase tracking-wide text-bch-muted">
-              <th className="py-2 pr-3 font-semibold">Section</th>
-              {TRADE_ORDER.map((id) => (
-                <th key={id} className="w-12 py-2 text-center font-semibold">
-                  {SHORT[id]}
-                </th>
-              ))}
-              <th className="w-16 py-2 text-right font-semibold">Pages</th>
-              <th className="py-2 pl-3 font-semibold">What it is</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-bch-line">
-            {rows.map((s, i) => (
-              <tr key={`${s.sectionNumber}-${s.startPage}-${i}`}>
-                <td className="whitespace-nowrap py-2 pr-3 font-mono text-xs text-bch-ink">
-                  {s.sectionNumber}
-                </td>
-                {TRADE_ORDER.map((id) => (
-                  <td key={id} className="py-2 text-center">
-                    <RoleMark role={s.roles[id]} />
-                  </td>
-                ))}
-                <td className="whitespace-nowrap py-2 text-right text-xs text-bch-muted">
-                  {s.startPage !== null ? `${s.startPage}–${s.endPage}` : '—'}
-                </td>
-                <td className="py-2 pl-3 text-xs text-bch-ink">
-                  {s.summary || s.title || '—'}
-                  {s.splitWarnings.map((w) => (
-                    <span key={w} className="mt-0.5 block text-[11px] text-amber-700">
-                      {w}
-                    </span>
-                  ))}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
       {/* ---- what this will cost, before anything is spent */}
       <div className="mt-5 rounded border border-bch-line bg-bch-bg p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -202,67 +159,140 @@ export default function ManifestReview({
         </p>
       </div>
 
+      {/*
+        The two long lists are folded away by default.
+
+        Between them they ran to 150 rows on a project manual, which pushed the
+        build button several screens down and buried the three trade checkboxes
+        that are the actual decision. They are reference, consulted when a page
+        range or a summary looks wrong — not something to read top to bottom
+        before every build. The counts stay on the closed summary so nothing is
+        hidden, only folded.
+      */}
+      <details className="group mt-4 rounded border border-bch-line">
+        <summary className="flex cursor-pointer list-none items-center gap-2 p-3 hover:bg-bch-bg [&::-webkit-details-marker]:hidden">
+          <span className="text-bch-muted transition-transform group-open:rotate-90">▸</span>
+          <span className="text-sm font-semibold text-bch-ink">
+            Every section, and what it feeds
+          </span>
+          <span className="ml-auto text-xs text-bch-muted">
+            {rows.length} shown{hidden > 0 ? ` · ${hidden} supporting hidden` : ''}
+          </span>
+        </summary>
+
+        <div className="border-t border-bch-line p-3">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-bch-line text-[11px] uppercase tracking-wide text-bch-muted">
+                  <th className="py-2 pr-3 font-semibold">Section</th>
+                  {TRADE_ORDER.map((id) => (
+                    <th key={id} className="w-12 py-2 text-center font-semibold">
+                      {SHORT[id]}
+                    </th>
+                  ))}
+                  <th className="w-16 py-2 text-right font-semibold">Pages</th>
+                  <th className="py-2 pl-3 font-semibold">What it is</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-bch-line">
+                {rows.map((s, i) => (
+                  <tr key={`${s.sectionNumber}-${s.startPage}-${i}`}>
+                    <td className="whitespace-nowrap py-2 pr-3 font-mono text-xs text-bch-ink">
+                      {s.sectionNumber}
+                    </td>
+                    {TRADE_ORDER.map((id) => (
+                      <td key={id} className="py-2 text-center">
+                        <RoleMark role={s.roles[id]} />
+                      </td>
+                    ))}
+                    <td className="whitespace-nowrap py-2 text-right text-xs tabular-nums text-bch-muted">
+                      {s.startPage !== null ? `${s.startPage}–${s.endPage}` : '—'}
+                    </td>
+                    <td className="py-2 pl-3 text-xs text-bch-ink">
+                      {s.summary || s.title || '—'}
+                      {s.splitWarnings.map((w) => (
+                        <span key={w} className="mt-0.5 block text-[11px] text-amber-700">
+                          {w}
+                        </span>
+                      ))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {hidden > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAll((v) => !v)}
+              className="mt-3 text-xs font-semibold text-bch-accent hover:underline"
+            >
+              {showAll
+                ? 'Show only sections that drive a sheet'
+                : `Show ${hidden} supporting section${hidden === 1 ? '' : 's'} as well`}
+            </button>
+          )}
+
+          <p className="mt-3 text-xs text-bch-muted">
+            <strong className="text-bch-ink">P</strong> drives a sheet ·{' '}
+            <strong className="text-bch-ink">s</strong> is read for cross-references and
+            conflicts, but gets no section of its own. Nothing in the upload is discarded.
+          </p>
+        </div>
+      </details>
+
       {/* ---- related sections outside the divisions read in full */}
       {referred.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-bch-muted">
-            Related, but not read — {referred.length} section
-            {referred.length === 1 ? '' : 's'}
-          </h3>
-          <p className="mt-1 text-xs text-bch-muted">
-            These sit outside Divisions 22 and 23 but bear on this work. Each is named on the
-            checklist with its page range so it can be checked directly. Tick one to have it
-            read in full instead.
-          </p>
-          <ul className="mt-2 divide-y divide-bch-line border-t border-bch-line">
-            {referred.map((s) => (
-              <li
-                key={`${s.sectionNumber}-${s.startPage}`}
-                className="flex items-start gap-3 py-2"
-              >
-                <input
-                  type="checkbox"
-                  checked={alsoRead.includes(s.sectionNumber)}
-                  onChange={() => toggleRead(s.sectionNumber)}
-                  disabled={disabled}
-                  aria-label={`Read section ${s.sectionNumber} in full`}
-                  className="mt-0.5 h-4 w-4 shrink-0"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="font-mono text-xs text-bch-ink">{s.sectionNumber}</span>
-                  <span className="ml-2 text-xs text-bch-muted">
-                    {s.pageCount ?? '?'}p · pages {s.startPage ?? '?'}–{s.endPage ?? '?'}
-                  </span>
-                  <span className="mt-0.5 block text-xs text-bch-ink">
-                    {s.summary || s.title || '—'}
-                  </span>
-                </span>
-                <span className="shrink-0 text-xs tabular-nums text-bch-muted">
-                  +{money(s.addCost)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        <details className="group mt-3 rounded border border-bch-line">
+          <summary className="flex cursor-pointer list-none items-center gap-2 p-3 hover:bg-bch-bg [&::-webkit-details-marker]:hidden">
+            <span className="text-bch-muted transition-transform group-open:rotate-90">▸</span>
+            <span className="text-sm font-semibold text-bch-ink">Related, but not read</span>
+            <span className="ml-auto text-xs text-bch-muted">
+              {referred.length} section{referred.length === 1 ? '' : 's'}
+              {alsoRead.length > 0 ? ` · ${alsoRead.length} ticked to read` : ''}
+            </span>
+          </summary>
 
-      {hidden > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowAll((v) => !v)}
-          className="mt-3 text-xs font-semibold text-bch-accent hover:underline"
-        >
-          {showAll
-            ? 'Show only sections that drive a sheet'
-            : `Show ${hidden} supporting section${hidden === 1 ? '' : 's'} as well`}
-        </button>
+          <div className="border-t border-bch-line p-3">
+            <p className="text-xs text-bch-muted">
+              These sit outside Divisions 22 and 23 but bear on this work. Each is named on the
+              checklist with its page range so it can be checked directly. Tick one to have it
+              read in full instead.
+            </p>
+            <ul className="mt-2 divide-y divide-bch-line border-t border-bch-line">
+              {referred.map((s) => (
+                <li
+                  key={`${s.sectionNumber}-${s.startPage}`}
+                  className="flex items-start gap-3 py-2"
+                >
+                  <input
+                    type="checkbox"
+                    checked={alsoRead.includes(s.sectionNumber)}
+                    onChange={() => toggleRead(s.sectionNumber)}
+                    disabled={disabled}
+                    aria-label={`Read section ${s.sectionNumber} in full`}
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="font-mono text-xs text-bch-ink">{s.sectionNumber}</span>
+                    <span className="ml-2 text-xs text-bch-muted">
+                      {s.pageCount ?? '?'}p · pages {s.startPage ?? '?'}–{s.endPage ?? '?'}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-bch-ink">
+                      {s.summary || s.title || '—'}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs tabular-nums text-bch-muted">
+                    +{money(s.addCost)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </details>
       )}
-
-      <p className="mt-3 text-xs text-bch-muted">
-        <strong className="text-bch-ink">P</strong> drives a sheet ·{' '}
-        <strong className="text-bch-ink">s</strong> is read for cross-references and
-        conflicts, but gets no section of its own. Nothing in the upload is discarded.
-      </p>
 
       {manifest.warnings.map((w) => (
         <p

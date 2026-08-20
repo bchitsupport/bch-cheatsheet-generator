@@ -43,6 +43,14 @@ export default function NewSheetPage() {
   const [spent, setSpent] = useState<number | null>(null);
 
   const resultsRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLElement>(null);
+
+  /**
+   * Which of the two runs is in flight. Both post to the same route and both
+   * begin by splitting and identifying, so without this the progress card
+   * cannot tell the user whether a build has started or the scan is repeating.
+   */
+  const [mode, setMode] = useState<"scan" | "build">("scan");
 
   /**
    * One request handler for both stages. Called with no trades it stops after
@@ -189,8 +197,18 @@ export default function NewSheetPage() {
     [files, project, alsoRead],
   );
 
+  /** Put the progress card on screen — it renders on the next tick. */
+  const revealProgress = () => {
+    setTimeout(
+      () => progressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      60,
+    );
+  };
+
   const scan = useCallback(async () => {
+    setMode('scan');
     setStage('building');
+    revealProgress();
     setManifest(null);
     setSheets([]);
     await run([]);
@@ -198,10 +216,23 @@ export default function NewSheetPage() {
   }, [run]);
 
   const build = useCallback(async () => {
+    setMode('build');
     setStage('building');
+    // The build button sits below the review, and the progress card above it.
+    // Without this the run starts several screens out of sight and the only
+    // feedback is a spinner you have to go looking for.
+    revealProgress();
     await run(selected);
     setStage((s) => (s === 'building' ? 'review' : s));
   }, [run, selected]);
+
+  // A scan stops after the manifest; a build carries on into reading and
+  // composing. Numbering the phase against the right list is what makes
+  // "Splitting the book into sections" legible as step 1 of 4 rather than as
+  // the scan apparently running a second time.
+  const phases: BuildStepKey[] =
+    mode === 'build' ? ['split', 'identify', 'read', 'compose'] : ['split', 'identify'];
+  const stepIndex = Math.max(0, step ? phases.indexOf(step) : 0);
 
   const busy = stage === 'building';
   const canScan = files.length > 0 && !busy;
@@ -234,17 +265,56 @@ export default function NewSheetPage() {
       )}
 
       {busy && (
-        <section className="card p-5">
+        <section
+          ref={progressRef}
+          className="card sticky top-4 z-30 border-bch-accent p-5 shadow-lg"
+        >
           <div className="flex items-center gap-3">
-            <span className="bch-spin inline-block h-4 w-4 rounded-full border-2 border-bch-line border-t-bch-accent" />
-            <span className="text-sm font-semibold text-bch-ink">
-              {step ? STEP_LABEL[step] : 'Starting'}
+            <span className="bch-spin inline-block h-5 w-5 shrink-0 rounded-full border-2 border-bch-line border-t-bch-accent" />
+            <span className="text-base font-bold text-bch-navy">
+              {mode === 'build' ? 'Building your sheets' : 'Scanning the specifications'}
             </span>
             {elapsed > 0 && (
               <span className="ml-auto text-xs tabular-nums text-bch-muted">
                 {Math.floor(elapsed / 60)}m {String(elapsed % 60).padStart(2, '0')}s
               </span>
             )}
+          </div>
+
+          {/*
+            The phase, numbered against the phases this run actually has.
+            A build repeats the split and the identify — the route takes files,
+            not a saved manifest — so without a number the screen says
+            "Splitting the book into sections" after you press Build and reads
+            like it never left the scan.
+          */}
+          <p className="mt-2 text-sm text-bch-ink">
+            <span className="font-semibold">
+              Step {stepIndex + 1} of {phases.length}
+            </span>
+            {' · '}
+            {step ? STEP_LABEL[step] : 'Starting'}
+            {mode === 'build' && (step === 'split' || step === 'identify') && (
+              <span className="text-bch-muted">
+                {' '}
+                — repeated from the scan, because the build starts from the files again
+              </span>
+            )}
+          </p>
+
+          <div className="mt-3 flex gap-1">
+            {phases.map((p, i) => (
+              <span
+                key={p}
+                className={`h-1.5 flex-1 rounded ${
+                  i < stepIndex
+                    ? 'bg-bch-accent'
+                    : i === stepIndex
+                      ? 'bg-bch-accent/40'
+                      : 'bg-bch-line'
+                }`}
+              />
+            ))}
           </div>
 
           {progress && progress.total > 0 && (
@@ -262,7 +332,9 @@ export default function NewSheetPage() {
           )}
 
           <p className="mt-3 text-xs text-bch-muted">
-            A full division takes 15–25 minutes. Leave this tab open.
+            {mode === 'build'
+              ? 'A full division takes 15–25 minutes. Leave this tab open.'
+              : 'A scan takes a couple of minutes. Leave this tab open.'}
           </p>
 
           {spent !== null && (
@@ -276,7 +348,7 @@ export default function NewSheetPage() {
           )}
 
           {sheets.length > 0 && (
-            <p className="mt-2 text-xs text-bch-ink">
+            <p className="mt-2 text-xs font-semibold text-bch-ink">
               Finished: {sheets.map((s) => s.name).join(', ')}
             </p>
           )}
