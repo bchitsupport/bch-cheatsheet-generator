@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'BCH Cheat Sheet Generator',
   description:
-    'Generate BCH Mechanical field cheat sheets from construction specification PDFs.',
+    'Generate BCH Mechanical cheat sheets from construction specification PDFs.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -55,7 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 BCH MECHANICAL, L.L.C.
               </div>
               <div className="text-[11px] text-bch-muted">
-                Field Cheat Sheet Generator
+                Cheat Sheet Generator
               </div>
             </div>
             <Image

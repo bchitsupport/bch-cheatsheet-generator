@@ -47,7 +47,7 @@ export default function Sidebar() {
       </ul>
 
       <div className="border-t border-white/15 px-4 py-4 text-[10px] leading-relaxed text-blue-200">
-        Field reference only.
+        Reference only.
         <br />
         Verify against full spec &amp; drawings.
       </div>
