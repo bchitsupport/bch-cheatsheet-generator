@@ -6,6 +6,7 @@ import { renderAll } from '@/lib/pdf-render';
 import {
   buildManifest,
   describeCoverage,
+  reuseManifest,
   planReading,
   type Manifest,
 } from '@/lib/section-router';
@@ -49,6 +50,9 @@ export async function POST(request: Request) {
     .filter((t): t is DivisionId => isDivisionId(t));
   // Sections outside Divisions 22/23 that the user ticked to have read in full.
   const alsoRead = new Set(form.getAll('alsoRead').map(String));
+  // The manifest the review screen is showing, posted back so the build does
+  // not pay to work it out a second time.
+  const priorManifest = form.get('manifest');
 
   const s = (v: FormDataEntryValue | null) => (typeof v === 'string' ? v.trim() : '');
   const project: ProjectInfo = {
@@ -93,14 +97,38 @@ export async function POST(request: Request) {
         }
 
         // --- identify
-        send({ type: 'step', step: 'identify' });
-        const manifest: Manifest = await buildManifest(
-          split.sections.map((sec) => ({
-            sectionNumber: sec.sectionNumber,
-            title: sec.title,
-            text: sec.text,
-          })),
-        );
+        const routerInput = split.sections.map((sec) => ({
+          sectionNumber: sec.sectionNumber,
+          title: sec.title,
+          text: sec.text,
+        }));
+
+        let manifest: Manifest | null =
+          typeof priorManifest === 'string' && priorManifest
+            ? reuseManifest(priorManifest, routerInput)
+            : null;
+
+        if (manifest) {
+          console.log(
+            `[manifest] reused ${manifest.sections.length} classifications from the review ` +
+              'screen — classifier not called',
+          );
+        } else {
+          if (typeof priorManifest === 'string' && priorManifest) {
+            // Only reachable if the split changed under the manifest, which
+            // means the code moved mid-session. Paying again beats reading one
+            // section on another section's classification.
+            send({
+              type: 'warning',
+              message:
+                'The sections found in this upload no longer match the ones on the review ' +
+                'screen, so they had to be classified again. Check the list before relying ' +
+                'on the sheets.',
+            });
+          }
+          send({ type: 'step', step: 'identify' });
+          manifest = await buildManifest(routerInput);
+        }
 
         // Index, not section number. A book can name the same number twice — a
         // divider page, a heading caught mid-page, a section genuinely split

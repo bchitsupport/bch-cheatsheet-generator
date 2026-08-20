@@ -367,6 +367,93 @@ function parseManifest(raw: string): unknown[] {
 const ROLES: Role[] = ['primary', 'supporting', 'none'];
 const isRole = (v: unknown): v is Role => ROLES.includes(v as Role);
 
+/**
+ * Rebuild a manifest the caller already paid for, instead of classifying again.
+ *
+ * Both stages post to the same route with the same files, so the build used to
+ * repeat the classification the review screen had just shown — a second charge
+ * and several more minutes for an answer already on the user's screen. The
+ * client posts the manifest back and this reconstitutes it.
+ *
+ * The split is still redone, because the section text has to come from
+ * somewhere and splitting costs nothing. That also gives the check that makes
+ * reuse safe: the manifest is positional, so it is only valid against a split
+ * that produced the same sections in the same order. Same files and same code
+ * do, but a deploy mid-session might not, and silently reading section 40's
+ * classification against section 41's text would be far worse than paying
+ * twice. Anything that does not line up exactly returns null and the caller
+ * classifies again.
+ */
+export function reuseManifest(raw: string, sections: RouterInput[]): Manifest | null {
+  let parsed: any;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+
+  const priorSections = parsed?.sections;
+  const priorTrades = parsed?.trades;
+  if (!Array.isArray(priorSections) || !Array.isArray(priorTrades)) return null;
+  if (priorSections.length !== sections.length) return null;
+  if (priorTrades.length !== DIVISIONS.length) return null;
+
+  const routed: RoutedSection[] = [];
+
+  for (const [i, source] of sections.entries()) {
+    const prior = priorSections[i];
+    // Position is the identity, so a number out of place means the split moved
+    // under the manifest and none of it can be trusted.
+    if (prior?.sectionNumber !== source.sectionNumber) return null;
+
+    const roles: Record<DivisionId, Role> = {
+      plumbing: 'none',
+      sheetmetal: 'none',
+      hydronic: 'none',
+    };
+    const targets: RoutedSection['targets'] = {};
+
+    for (const id of Object.keys(roles) as DivisionId[]) {
+      const value = prior?.roles?.[id];
+      if (!isRole(value)) return null;
+      roles[id] = value;
+      if (value !== 'primary') continue;
+      const t = prior?.targets?.[id];
+      const valid = Array.isArray(t) ? t.filter((x: unknown) => typeof x === 'string') : [];
+      if (valid.length === 0) return null;
+      targets[id] = valid;
+    }
+
+    routed.push({
+      sectionNumber: source.sectionNumber,
+      // Taken from this split rather than from the payload: whatever the client
+      // holds is a copy, and these are cheap to derive correctly.
+      title: source.title,
+      charCount: source.text.length,
+      summary: typeof prior?.summary === 'string' ? prior.summary : '',
+      roles,
+      targets,
+    });
+  }
+
+  const trades: TradePresence[] = [];
+  for (const d of DIVISIONS) {
+    const prior = priorTrades.find((t: any) => t?.id === d.id);
+    if (!prior || typeof prior.present !== 'boolean') return null;
+    trades.push({
+      id: d.id,
+      name: d.name,
+      primaryCount: routed.filter((r) => r.roles[d.id] === 'primary').length,
+      supportingCount: routed.filter((r) => r.roles[d.id] === 'supporting').length,
+      present: prior.present,
+      uncertain: prior.uncertain === true,
+      note: typeof prior.note === 'string' ? prior.note : '',
+    });
+  }
+
+  return { sections: routed, trades, warnings: [] };
+}
+
 export async function buildManifest(sections: RouterInput[]): Promise<Manifest> {
   if (sections.length === 0) {
     return { sections: [], trades: [], warnings: ['No sections to route.'] };

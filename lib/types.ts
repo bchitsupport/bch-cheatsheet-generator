@@ -123,6 +123,8 @@ export interface TradePresenceView {
   primaryCount: number;
   supportingCount: number;
   present: boolean;
+  /** Not present because sections of this division could not be classified. */
+  uncertain: boolean;
   note: string;
 }
 

@@ -53,6 +53,13 @@ export default function NewSheetPage() {
   const [mode, setMode] = useState<"scan" | "build">("scan");
 
   /**
+   * True once the route says it is classifying — which on a build only happens
+   * when the posted manifest did not match the split, so the phase list has to
+   * grow back to four.
+   */
+  const [reclassifying, setReclassifying] = useState(false);
+
+  /**
    * One request handler for both stages. Called with no trades it stops after
    * the manifest; called with trades it goes on to build. The route decides —
    * this just reads the frames.
@@ -65,12 +72,35 @@ export default function NewSheetPage() {
       setProgress(null);
       setElapsed(0);
       setSpent(null);
+      setReclassifying(false);
       if (trades.length > 0) setSheets([]);
 
       const body = new FormData();
       for (const f of files) body.append('files', f);
       for (const t of trades) body.append('trades', t);
       for (const n of alsoRead) body.append('alsoRead', n);
+      if (trades.length > 0 && manifest) {
+        // What the review screen is showing. The route classifies again only if
+        // this does not line up with the split, so a build no longer repeats —
+        // or re-charges for — the work the scan already did.
+        body.set(
+          'manifest',
+          JSON.stringify({
+            sections: manifest.sections.map((x) => ({
+              sectionNumber: x.sectionNumber,
+              summary: x.summary,
+              roles: x.roles,
+              targets: x.targets,
+            })),
+            trades: manifest.trades.map((t) => ({
+              id: t.id,
+              present: t.present,
+              uncertain: t.uncertain,
+              note: t.note,
+            })),
+          }),
+        );
+      }
       if (trades.length > 0) {
         body.set('projectName', project.projectName);
         body.set('projectSub', project.projectSub);
@@ -96,6 +126,7 @@ export default function NewSheetPage() {
           switch (event.type) {
             case 'step':
               setStep(event.step);
+              if (event.step === 'identify' && trades.length > 0) setReclassifying(true);
               if (event.total) setProgress({ done: 0, total: event.total });
               break;
             case 'progress':
@@ -194,7 +225,7 @@ export default function NewSheetPage() {
         setError(err instanceof Error ? err.message : 'The run failed.');
       }
     },
-    [files, project, alsoRead],
+    [files, project, alsoRead, manifest],
   );
 
   /** Put the progress card on screen — it renders on the next tick. */
@@ -231,7 +262,11 @@ export default function NewSheetPage() {
   // "Splitting the book into sections" legible as step 1 of 4 rather than as
   // the scan apparently running a second time.
   const phases: BuildStepKey[] =
-    mode === 'build' ? ['split', 'identify', 'read', 'compose'] : ['split', 'identify'];
+    mode === 'build'
+      ? reclassifying
+        ? ['split', 'identify', 'read', 'compose']
+        : ['split', 'read', 'compose']
+      : ['split', 'identify'];
   const stepIndex = Math.max(0, step ? phases.indexOf(step) : 0);
 
   const busy = stage === 'building';
