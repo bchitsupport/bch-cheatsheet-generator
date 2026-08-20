@@ -7,6 +7,7 @@ import {
 } from '@/lib/section-matcher';
 import { getDivision, isDivisionId } from '@/lib/upload-lists';
 import type { ExtractedFile } from '@/lib/types';
+import { requireAccess } from '@/lib/access';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -19,6 +20,10 @@ export const maxDuration = 60;
  * /api/generate as JSON, so the PDFs themselves are only uploaded once.
  */
 export async function POST(request: Request) {
+  // Middleware cannot run on this route — see lib/access.ts.
+  const denied = await requireAccess(request);
+  if (denied) return denied;
+
   try {
     const form = await request.formData();
     const divisionId = form.get('division');

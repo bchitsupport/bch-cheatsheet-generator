@@ -48,8 +48,14 @@ function normaliseNumber(raw: string): string {
 const SECTION_LINE = new RegExp(
   // The title is optional: some books put it on the following line instead of
   // after a dash, and a section with no title still needs to be found.
+  //
+  // Case-sensitive, and anchored to the start of a line. That is what separates
+  // a heading from a cross-reference: headings are written `SECTION 01 10 00 -
+  // SUMMARY`, while body text says "as specified in Section 01 25 00". Matching
+  // case-insensitively turned one such sentence into a section of its own,
+  // splitting its neighbour in two.
   String.raw`^\s*SECTION\s+(${CSI})\s*(?:[-–—:]\s*(.+?))?\s*$`,
-  'im',
+  'm',
 );
 
 /**
@@ -103,18 +109,6 @@ const BARE_NUMBER = new RegExp(String.raw`^\s*(${CSI})\s*$`);
  */
 const HEADER_LINES = 10;
 
-/**
- * How far down a page the `SECTION nnnnnn - TITLE` line may appear. It sits just
- * below the running header — line 3 in one book, line 6 in another — never
- * halfway down.
- *
- * Searching the whole page instead reads body text as a section start: a manual
- * containing "as specified in Section 01 25 00 Substitution Procedures" produced
- * a section titled "Substitution Procedures regarding requirements" in the
- * middle of the architectural woodwork, and split its neighbour in two.
- */
-const SECTION_LINE_WINDOW = 14;
-
 export interface SplitSection {
   sectionNumber: string;
   title: string | null;
@@ -143,6 +137,15 @@ interface PageRead {
   ordinal: number | null;
   /** The section's own stated page count, where the header gives one. */
   statedTotal: number | null;
+  /**
+   * This page carries a `SECTION nnnnnn - TITLE` line.
+   *
+   * Kept separate from `isStart`, which means "numbered 1 within its section"
+   * and depends on a page stamp. A book with no running header has no stamps at
+   * all, so every `isStart` is false — and treating that as "no sections found"
+   * made a 216-page manual with perfectly good SECTION lines unreadable.
+   */
+  hasSectionLine: boolean;
   isStart: boolean;
   title: string | null;
 }
@@ -157,7 +160,12 @@ function readPage(text: string, page: number): PageRead {
     .filter(Boolean);
   const headerLines = lines.slice(0, HEADER_LINES);
   const header = headerLines.join('\n');
-  const opening = lines.slice(0, SECTION_LINE_WINDOW).join('\n');
+  // The whole page: a section can begin anywhere on one. Some books run sections
+  // continuously, starting a new one wherever the last ended — in a 216-page
+  // manual the headings sat at line 16 and beyond, and a window measured from the
+  // top of the page found 47 of 113. Case-sensitivity, not position, is what
+  // keeps body cross-references out.
+  const opening = lines.join('\n');
 
   let section: string | null = null;
   let ordinal: number | null = null;
@@ -170,6 +178,7 @@ function readPage(text: string, page: number): PageRead {
     section = normaliseNumber(named[1]);
     if (named[2]) title = named[2].replace(/\s+/g, ' ').trim();
   }
+  const hasSectionLine = named !== null;
 
   // The page stamp carries the section and the page's place within it. Confined
   // to the header so a body reference to another section cannot masquerade.
@@ -233,7 +242,15 @@ function readPage(text: string, page: number): PageRead {
   // A page opens a section when it says so — ordinal 1. Books that repeat the
   // SECTION line in every running header would otherwise mark every page a
   // start, so the line itself is not evidence of one.
-  return { page, section, ordinal, statedTotal, isStart: ordinal === 1, title };
+  return {
+    page,
+    section,
+    ordinal,
+    statedTotal,
+    hasSectionLine,
+    isStart: ordinal === 1,
+    title,
+  };
 }
 
 /**
@@ -320,7 +337,7 @@ export function splitSpecBook(pages: string[], declaredPageCount?: number): Spli
   }
 
   const stampedPages = reads.filter((r) => r.section !== null).length;
-  const explicitStarts = reads.filter((r) => r.isStart).length;
+  const explicitStarts = reads.filter((r) => r.hasSectionLine).length;
 
   let method: SplitResult['method'];
   if (stampedPages >= pages.length * 0.8) {
@@ -332,11 +349,12 @@ export function splitSpecBook(pages: string[], declaredPageCount?: number): Spli
         `boundaries were taken from the ${explicitStarts} "SECTION ..." lines instead and ` +
         'pages between them were inherited. Check the page ranges before generating.',
     );
-    // Carry the last explicit start forward across unstamped pages.
+    // Carry each named section forward across the pages that follow it. Any page
+    // that names a section starts one; the rest belong to whatever came before.
     let current: string | null = null;
     for (const r of reads) {
-      if (r.isStart && r.section) current = r.section;
-      if (!r.section) r.section = current;
+      if (r.section) current = r.section;
+      else r.section = current;
     }
   } else {
     return {

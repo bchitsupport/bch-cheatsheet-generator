@@ -56,6 +56,19 @@ export default async function middleware(request: NextRequest) {
   return NextResponse.redirect(url);
 }
 
+/**
+ * Everything except the upload routes.
+ *
+ * Middleware runs in the Edge runtime, which buffers the request body and caps
+ * it at a few megabytes. Anything larger is destroyed before the route handler
+ * sees it and `request.formData()` fails with "Failed to parse body as
+ * FormData" — which reads like a bad file and is not. Measured: a 12 MB spec
+ * book failed with the matcher covering these routes and split cleanly without.
+ * The two largest books tested, 12 MB and 15 MB, were both unusable.
+ *
+ * Those routes therefore check access themselves — see `requireAccess` — rather
+ * than relying on middleware they cannot afford to run.
+ */
 export const config = {
-  matcher: ['/((?!_next/static|_next/image).*)'],
+  matcher: ['/((?!_next/static|_next/image|api/split|api/build|api/blocks|api/extract).*)'],
 };
