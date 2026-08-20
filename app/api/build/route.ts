@@ -149,8 +149,19 @@ export async function POST(request: Request) {
         // "relevant but unread": the plan drops administrative divisions and
         // collapses duplicates, so inferring it again showed 94 sections on the
         // review screen for the 34 that actually reach the checklist.
-        const willRefer = new Set(
+        // Carried as positions, like willRead. As a set of section numbers it
+        // marked every row sharing a pointed-at number, so a book naming
+        // 03 30 00 three times listed three identical pointers for the one entry
+        // that reaches the checklist — and gave React three rows with one key.
+        // planReading keeps the first occurrence of each number, and it walks in
+        // index order, so the first match is the one the pointer describes.
+        const referredNumbers = new Set(
           Object.values(preview.referred).flatMap((list) => list.map((r) => r.sectionNumber)),
+        );
+        const willRefer = new Set(
+          [...referredNumbers]
+            .map((n) => manifest.sections.findIndex((s) => s.sectionNumber === n))
+            .filter((i) => i !== -1),
         );
         const readPages = preview.toRead.reduce((sum, s) => sum + s.pageCount, 0);
 
@@ -159,7 +170,7 @@ export async function POST(request: Request) {
           sections: sectionsForReview.map((s, i) => ({
             ...s,
             willRead: willRead.has(i),
-            willRefer: willRefer.has(s.sectionNumber),
+            willRefer: willRefer.has(i),
             addCost: willRead.has(i)
               ? 0
               : estimateSectionCost(routable[i]?.pageCount ?? 0, BLOCK_MODEL),

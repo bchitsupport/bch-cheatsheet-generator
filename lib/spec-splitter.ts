@@ -429,6 +429,18 @@ export function splitSpecBook(pages: string[], declaredPageCount?: number): Spli
     else groups.push([r]);
   }
 
+  /**
+   * Does this book number its pages within their sections anywhere?
+   *
+   * If it does not, every section extent is inferred and saying so on each one
+   * is not a warning, it is the weather — 117 of 117 sections carried it on one
+   * manual, which is the same as carrying it on none. The banner that names the
+   * method already says it once, in the one place it belongs. Where a book does
+   * stamp ordinals, a section without them is genuinely singled out: 7 of 163 on
+   * a real book, and those seven are worth looking at.
+   */
+  const anyOrdinals = reads.some((r) => r.ordinal !== null);
+
   const seenNumbers = new Map<string, number>();
   const sections: SplitSection[] = groups.map((group) => {
     const sectionNumber = group[0].section!;
@@ -439,10 +451,11 @@ export function splitSpecBook(pages: string[], declaredPageCount?: number): Spli
     const titled = group.find((r) => r.title);
     const ordinals = group.map((r) => r.ordinal).filter((n): n is number => n !== null);
 
-    if (ordinals.length === 0) {
+    if (ordinals.length === 0 && anyOrdinals) {
       sectionWarnings.push(
-        'No page in this run is numbered within its section, so its extent is inferred ' +
-          'from where the section number changes. Check the page range.',
+        'No page in this run is numbered within its section, though the rest of the book ' +
+          'numbers its pages — so this extent is inferred from where the section number ' +
+          'changes. Check the page range.',
       );
     }
     // Where the book states its own section length, the split is checkable.

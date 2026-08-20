@@ -216,7 +216,10 @@ export default function ManifestReview({
           </p>
           <ul className="mt-2 divide-y divide-bch-line border-t border-bch-line">
             {referred.map((s) => (
-              <li key={s.sectionNumber} className="flex items-start gap-3 py-2">
+              <li
+                key={`${s.sectionNumber}-${s.startPage}`}
+                className="flex items-start gap-3 py-2"
+              >
                 <input
                   type="checkbox"
                   checked={alsoRead.includes(s.sectionNumber)}
