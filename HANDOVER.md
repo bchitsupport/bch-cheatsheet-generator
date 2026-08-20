@@ -15,38 +15,137 @@ estimators first: what governs quantity, material and scope leads.
 
 ---
 
-## Running it
+## Making it live
+
+**Nothing here has ever been deployed.** The tool has only ever run on the
+laptop it was written on. Everything in this section is reasoned from how the app
+behaves rather than from a server that has run it, so expect one round of
+surprises on the first attempt. The traps most likely to cause them are called
+out as they come up — a competent Linux or Node administrator should not need the
+author, but should read this whole section before starting rather than following
+it a step at a time.
+
+### Who does what
+
+**Whoever is handing it over:** transfer the repository and confirm somebody
+accepts it — a pending transfer looks identical to a completed one from the
+sender's side. Hand the API key over separately, never through the repository.
+
+**BCH, before any of the technical work:** name someone who owns this. A tool
+that spends money per use and has no owner stops being maintained the first time
+it breaks, and the failure is quiet.
+
+### 1. An Anthropic API key
+
+This is the blocker. Without it the application starts, serves its pages, and
+can do nothing at all.
+
+It must be BCH's own key on a BCH-owned account, not a personal one. While
+setting the account up, **set a monthly spend limit on it**. There is
+deliberately no spend cap in the application — a cap that halts a build halfway
+wastes everything already spent on it — so the account limit is the only
+backstop that exists. See *What it costs* for the numbers to pick a limit from.
+
+### 2. The machine
+
+- **Node.js 20 or newer.** `package-lock.json` is committed, so use `npm ci`
+  rather than `npm install` and the dependency versions are reproducible.
+- **Google Chrome.** PDF rendering drives a real browser through `puppeteer-core`.
+  On a server, install Chrome from Google's apt repository — it lands at
+  `/usr/bin/google-chrome-stable`, which the app checks for, and it pulls in the
+  system libraries headless Chrome needs. A minimal VM image will not have those
+  libraries otherwise, and the failure is an opaque shared-library error rather
+  than anything about PDFs.
+
+  **The snap trap.** `apt install chromium-browser` on current Ubuntu installs a
+  snap whose binary is at `/snap/bin/chromium`. That path is *not* in the list
+  the app searches, so rendering fails with "No local Chrome or Edge found" on a
+  machine that visibly has Chromium installed. Either install Google Chrome
+  proper, or set `LOCAL_CHROME_PATH` in `.env.local` to the real binary. The
+  comment in `.env.local.example` describes that variable as being for local
+  development; on a self-hosted server it is a legitimate escape hatch.
+- **Outbound HTTPS** to `api.anthropic.com`, `fonts.googleapis.com` and
+  `fonts.gstatic.com`. Without the font hosts, documents render in the wrong
+  typefaces and **nothing warns you** — the sheets simply come out looking wrong.
+  `npm run check:fonts` is the test for this and it needs no API credit.
+- **Size.** 2 vCPU and 4 GB RAM — that part is an estimate, and Chromium plus a
+  1600-page PDF being parsed are the two things that need the headroom. Disk is
+  measured: `node_modules` is 516 MB and the production build another 148 MB, so
+  a deployed copy is around 700 MB before it does any work. Allow 10 GB and it
+  will be a long time before anything needs attention.
+
+  Working files grow slowly. A data block is about 14 KB and a finished sheet
+  with its checklist about 800 KB, so a job on a 25-section book leaves roughly
+  1 MB behind between `.block-cache/` and whatever is downloaded. At five sheets
+  a week that is on the order of 250 MB a year — real, but not urgent. See
+  *Ongoing ownership* below.
+
+### 3. Install
 
 ```bash
-npm install
-npm run dev          # development, http://localhost:3000
-npm run build && npm start   # production
+git clone <the repository> /opt/cheatsheets
+cd /opt/cheatsheets
+npm ci
+cp .env.local.example .env.local
 ```
 
-`.env.local` needs, at minimum:
+Edit `.env.local` — at minimum `ANTHROPIC_API_KEY` and `ACCESS_CONTROL`. Every
+other variable is documented in that file, including the Entra sign-in block.
 
+The file holds an API key, so it should be owned by the service account and
+readable only by it:
+
+```bash
+chown cheatsheets:cheatsheets .env.local && chmod 600 .env.local
 ```
-ANTHROPIC_API_KEY=sk-ant-...
-ACCESS_CONTROL=network-only
+
+Then build:
+
+```bash
+npm run build
 ```
 
-See `.env.local.example` for everything else, including the Microsoft Entra
-sign-in settings if that is ever wanted instead of network-only access.
+### 4. Choose the access model
 
-**On a deployed server the app refuses to serve any non-local host unless one of
-those two access-control choices is set.** That is deliberate. It stops an
-unfinished setup sitting open on the network with a tool that spends money and
-reads confidential bid documents.
+`ACCESS_CONTROL=network-only` means reaching the site at all requires being on
+the LAN or the VPN, with no sign-in. The alternative is Microsoft Entra ID,
+configured with the variables in `.env.local.example`.
 
-### The server needs
+**The app refuses to serve any non-local host until one of the two is set.** That
+is deliberate, not a bug to work around: it stops an unfinished setup sitting
+open on the network with a tool that spends money and reads confidential bid
+documents. If the site returns a refusal after deployment, this is why.
 
-- Node.js 20+
-- Google Chrome or Edge installed (PDF rendering drives a real browser)
-- Outbound HTTPS to `api.anthropic.com`, `fonts.googleapis.com`,
-  `fonts.gstatic.com` — without the font hosts, documents render in the wrong
-  typefaces and nothing warns you
+### 5. If it sits behind a reverse proxy, raise the timeouts
 
-### Run it as a service, not from a terminal
+**This will break the tool if it is missed, and the symptom does not point at the
+cause.** A build streams NDJSON for the entire run — 15 to 45 minutes — over one
+HTTP connection that is deliberately never buffered. Nginx's `proxy_read_timeout`
+defaults to 60 seconds, and Apache's `ProxyTimeout` likewise. At that default the
+connection is cut mid-run, the browser reports that the server stopped
+responding, and the money for everything read up to that point is spent with no
+sheets produced.
+
+On nginx:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+    proxy_buffering off;
+    proxy_cache off;
+}
+```
+
+`proxy_buffering off` matters as much as the timeout: with buffering on, the
+progress events are held back and the page looks frozen for the whole run.
+
+Serving it directly on port 3000 with no proxy avoids all of this, and for a
+LAN-only tool that is a perfectly reasonable choice. Whichever way, open the port
+to the LAN in the firewall.
+
+### 6. Run it as a service, not from a terminal
 
 `npm start` in a shell dies when that session closes and does not come back after
 a reboot — the tool works until the first restart and then quietly does not.
@@ -80,7 +179,90 @@ On Windows, NSSM or a scheduled task set to run at startup does the same job.
 A run takes 15–45 minutes, so `Restart=always` matters: a crash mid-build should
 bring the service back rather than leave the site down until somebody notices.
 
+### 7. Prove it works, cheaply, in this order
+
+Do not test by building a sheet. Each step below costs more than the last, and
+each one proves something the next depends on.
+
+```bash
+npm run check:fonts     # webfonts reachable — free
+npm run check:layout    # page-break rules intact — free
+npm run split -- "<a real spec book.pdf>"   # does this book parse? free, seconds
+```
+
+If the split reports sections with sensible page ranges, the hard part works.
+Then use the website: upload the same book and **scan** it, which stops at the
+review screen and costs around $0.35 on a large manual. Only when the review
+screen looks right should anyone press Build.
+
+The first real build is also the first test of the reverse-proxy timeout, so
+watch it rather than walking away.
+
+### 8. Ongoing ownership
+
+- **Spend.** There is no cap in the app. The monthly limit on the Anthropic
+  account is the backstop; somebody should be looking at the bill.
+- **Disk.** `out/` and `.block-cache/` grow without limit and hold content
+  derived from client specifications. Both are safe to delete when no run is in
+  progress — the cache only costs a re-read if it is cleared, and `out/` is only
+  written by the command-line scripts and the development-only save route. The
+  growth is slow (see *The machine* above), so a periodic clear-out is enough;
+  what matters more is that the content is client material sitting on a server,
+  which is a retention question rather than a disk one.
+- **Past Jobs is not a shared record.** It is browser `localStorage`: per
+  machine, per person, and gone when browser data is cleared. If BCH expects a
+  company history of every sheet ever produced, that does not exist and nobody
+  should discover it at a bad moment.
+
+### 9. Updating it later
+
+```bash
+cd /opt/cheatsheets
+git pull
+npm ci
+npm run build
+sudo systemctl restart cheatsheets
+```
+
+Rebuild before restarting, not after: `npm start` serves whatever is in `.next`,
+so restarting without building serves the previous version and looks like the
+update silently failed.
+
 ---
+
+## Running it on your own machine
+
+For a server, follow *Making it live* above instead — this is the developer
+quick-start.
+
+```bash
+npm ci
+npm run dev          # development, http://localhost:3000
+npm run build && npm start   # production build, served locally
+```
+
+`.env.local` needs, at minimum:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+ACCESS_CONTROL=network-only
+```
+
+See `.env.local.example` for everything else, including the Microsoft Entra
+sign-in settings if that is ever wanted instead of network-only access, and the
+machine requirements in *Making it live* for Chrome and the outbound hosts.
+
+**On a deployed server the app refuses to serve any non-local host unless one of
+those two access-control choices is set.** That is deliberate. It stops an
+unfinished setup sitting open on the network with a tool that spends money and
+reads confidential bid documents. Localhost is exempt, which is why development
+needs no such setting.
+
+**`next dev` and `next build` write to different directories** (`.next-dev` and
+`.next`), so a build cannot pull the chunks out from under a running dev server.
+But `npm start` serves `.next`, so if you have only ever run `npm run dev`, run
+`npm run build` before `npm start` or you will serve a stale build.
+
 
 ## How it works, and why
 
