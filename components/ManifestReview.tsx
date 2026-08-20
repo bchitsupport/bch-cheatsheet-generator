@@ -157,8 +157,8 @@ export default function ManifestReview({
             </tr>
           </thead>
           <tbody className="divide-y divide-bch-line">
-            {rows.map((s) => (
-              <tr key={s.sectionNumber}>
+            {rows.map((s, i) => (
+              <tr key={`${s.sectionNumber}-${s.startPage}-${i}`}>
                 <td className="whitespace-nowrap py-2 pr-3 font-mono text-xs text-bch-ink">
                   {s.sectionNumber}
                 </td>

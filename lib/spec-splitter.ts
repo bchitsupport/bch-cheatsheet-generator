@@ -100,6 +100,39 @@ const ORDINAL_OF = /(?:^|\s)(?:Page\s+)?(\d{1,3})\s+of\s+(\d{1,3})(?!\d)/i;
 
 /** A bare CSI number on its own line, as some running headers write it. */
 const BARE_NUMBER = new RegExp(String.raw`^\s*(${CSI})\s*$`);
+/**
+ * A whole line that is nothing but a number and a title — `● 22 05 00 - Domestic
+ * Water Piping`. One such line is a contents entry; a page made mostly of them
+ * is a table of contents.
+ */
+const CONTENTS_ENTRY = new RegExp(
+  String.raw`^[\s\u2022\u25cf\u25cb*\u00b7\-\u2013\u2014]*${CSI}\s*[-\u2013\u2014]?\s*[A-Za-z][A-Za-z0-9 &,'./()\-\u2013\u2014]*$`,
+);
+
+/**
+ * Is this page a table of contents?
+ *
+ * A contents page names other sections, and a book that prints one per division
+ * gives each of those headings the shape of a running header. On a 216-page
+ * project manual that produced five phantom one-page sections — and one was
+ * numbered `22 05 00`, colliding with the real Common Work Results for Plumbing
+ * 125 pages further on.
+ *
+ * Counting contents lines is not enough on its own: real spec pages in these
+ * books carry up to seventeen cross-references written the same way. What marks
+ * a contents page is that the entries are most of what is on it. Measured over
+ * the five books to hand, genuine pages peak at 0.30 and contents pages run 0.45
+ * to 0.83, so the threshold sits in the gap with room either side.
+ *
+ * A page carrying a `SECTION ...` line is never contents, whatever else is on
+ * it: a book may print a division's contents block on the same page that opens
+ * that division's first section, which is exactly what this book does.
+ */
+function isContentsPage(lines: string[], hasSectionLine: boolean): boolean {
+  if (hasSectionLine || lines.length === 0) return false;
+  const entries = lines.filter((l) => CONTENTS_ENTRY.test(l)).length;
+  return entries >= 5 && entries / lines.length >= 0.4;
+}
 
 /**
  * How many lines from the top of a page count as the running header — counted
@@ -146,6 +179,8 @@ interface PageRead {
    * made a 216-page manual with perfectly good SECTION lines unreadable.
    */
   hasSectionLine: boolean;
+  /** A table of contents: it names other sections and belongs to none. */
+  isContents: boolean;
   isStart: boolean;
   title: string | null;
 }
@@ -180,6 +215,11 @@ function readPage(text: string, page: number): PageRead {
   }
   const hasSectionLine = named !== null;
 
+  // A contents page must not be allowed to name a section. Its entries look
+  // exactly like running headers, and the weak evidence below would take the
+  // first one as the page's own identity.
+  const contents = isContentsPage(lines, hasSectionLine);
+
   // The page stamp carries the section and the page's place within it. Confined
   // to the header so a body reference to another section cannot masquerade.
   PAGE_STAMP.lastIndex = 0;
@@ -194,7 +234,7 @@ function readPage(text: string, page: number): PageRead {
 
   // Title before the number, then the page stamp — run against the whole header
   // so a title and number on consecutive lines are seen as one.
-  if (!section || !title) {
+  if (!contents && (!section || !title)) {
     const flipped = TITLE_THEN_NUMBER.exec(header);
     if (flipped) {
       const candidate = normaliseNumber(flipped[2]);
@@ -206,7 +246,7 @@ function readPage(text: string, page: number): PageRead {
   }
 
   // A numbered title in the running header, for books that never write SECTION.
-  if (!section || !title) {
+  if (!contents && (!section || !title)) {
     for (const line of headerLines) {
       const titled = HEADER_TITLED.exec(line);
       if (!titled) continue;
@@ -218,7 +258,7 @@ function readPage(text: string, page: number): PageRead {
     }
   }
 
-  if (!section) {
+  if (!contents && !section) {
     for (const line of headerLines) {
       const bare = BARE_NUMBER.exec(line);
       if (bare) {
@@ -248,6 +288,7 @@ function readPage(text: string, page: number): PageRead {
     ordinal,
     statedTotal,
     hasSectionLine,
+    isContents: contents,
     isStart: ordinal === 1,
     title,
   };
@@ -353,6 +394,7 @@ export function splitSpecBook(pages: string[], declaredPageCount?: number): Spli
     // that names a section starts one; the rest belong to whatever came before.
     let current: string | null = null;
     for (const r of reads) {
+      if (r.isContents) continue;
       if (r.section) current = r.section;
       else r.section = current;
     }
@@ -374,6 +416,9 @@ export function splitSpecBook(pages: string[], declaredPageCount?: number): Spli
   // Group runs of consecutive pages that name the same section.
   const groups: PageRead[][] = [];
   for (const r of reads) {
+    // Contents pages belong to no section. Letting one join its neighbour would
+    // paste a list of every section in the book into that neighbour's own text.
+    if (r.isContents) continue;
     if (!r.section) {
       // Unattributed: belongs with whatever came before it.
       if (groups.length) groups[groups.length - 1].push(r);
@@ -432,8 +477,10 @@ export function splitSpecBook(pages: string[], declaredPageCount?: number): Spli
     }
     seenNumbers.set(sectionNumber, startPage);
 
-    const text = clean
-      .slice(startPage - 1, endPage)
+    // The group's own pages, not the span between its ends: a contents page
+    // dropped from the middle of a section must not come back via the slice.
+    const text = group
+      .map((r) => clean[r.page - 1])
       .join('\n')
       .replace(/\n{3,}/g, '\n\n')
       .trim();

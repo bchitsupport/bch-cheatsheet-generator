@@ -54,18 +54,24 @@ export async function POST(request: Request) {
         );
         send({ type: 'manifest', trades: manifest.trades, warnings: manifest.warnings });
 
-        const textByNumber = new Map(split.sections.map((s) => [s.sectionNumber, s.text]));
+        // Text taken by position. The manifest holds one entry per split
+        // section, in order; keyed by section number instead, a book that names
+        // the same number twice reads one of them from the other's text.
         const requests: BlockRequest[] = manifest.sections
-          .filter((s) => Object.values(s.roles).some((r) => r !== 'none'))
-          .map((s) => ({
-            sectionNumber: s.sectionNumber,
-            title: s.title,
-            text: textByNumber.get(s.sectionNumber) ?? '',
-            targets: s.targets,
-            supportingFor: (Object.keys(s.roles) as DivisionId[]).filter(
-              (id) => s.roles[id] === 'supporting',
-            ),
-          }));
+          .map((s, i) => ({
+            section: s,
+            request: {
+              sectionNumber: s.sectionNumber,
+              title: s.title,
+              text: split.sections[i]?.text ?? '',
+              targets: s.targets,
+              supportingFor: (Object.keys(s.roles) as DivisionId[]).filter(
+                (id) => s.roles[id] === 'supporting',
+              ),
+            },
+          }))
+          .filter(({ section }) => Object.values(section.roles).some((r) => r !== 'none'))
+          .map(({ request }) => request);
 
         send({ type: 'start', total: requests.length });
 
