@@ -92,6 +92,7 @@ export default function NewSheetPage() {
               roles: x.roles,
               targets: x.targets,
             })),
+            warnings: manifest.warnings,
             trades: manifest.trades.map((t) => ({
               id: t.id,
               present: t.present,

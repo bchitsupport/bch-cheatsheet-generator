@@ -105,7 +105,7 @@ export async function POST(request: Request) {
 
         let manifest: Manifest | null =
           typeof priorManifest === 'string' && priorManifest
-            ? reuseManifest(priorManifest, routerInput)
+            ? reuseManifest(priorManifest, routerInput, split.warnings)
             : null;
 
         if (manifest) {
